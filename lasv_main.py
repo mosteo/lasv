@@ -65,9 +65,9 @@ def lasv_main():
         print(f"Processing only crate: {target_crate}")
     else:
         print("Processing all crates.")
+        crates.list(context)
 
-    crates.list(context)
-
+    crates.process(context, target_crate)
 
 # Program entry point
 if __name__ == "__main__":

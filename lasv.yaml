@@ -1,612 +1,1223 @@
 crates:
-- a0b_armv7m
-- a0b_armv7m_systick_clock
-- a0b_armv7m_systick_clock_timer
-- a0b_atsam3x8e
-- a0b_atsam3x8e_gpio
-- a0b_atsam3x8e_tc5_timer
-- a0b_atsam3x8e_twi_i2c
-- a0b_base
-- a0b_callbacks
-- a0b_exti
-- a0b_gpio
-- a0b_i2c
-- a0b_stm32f2_generic_exti
-- a0b_stm32f2_generic_gpio
-- a0b_stm32f401
-- a0b_stm32f401_dma
-- a0b_stm32f401_gpio
-- a0b_stm32f401_i2c
-- a0b_stm32f401_tim11_timer
-- a0b_stm32g4
-- a0b_stm32g474
-- a0b_stm32g474_gpio
-- a0b_stm32g4_gpio
-- a0b_stm32h723
-- a0b_time
-- a0b_timer
-- a0b_tools
-- aaa
-- aaa_texts
-- aarch64_baremetal_ada
-- ada_caser
-- ada_fuse
-- ada_gui
-- ada_language_server
-- ada_lua
-- ada_pretty
-- ada_sqlite3
-- ada_toml
-- ada_voxel_space_demo
-- adabots
-- adacl
-- adacl_aunit
-- adacl_eastrings
-- adacl_regexp
-- adacl_sar
-- adagl_gtk3
-- adare_dilithium5
-- adare_hqc256
-- adasat
-- adayaml
-- adl_middleware
-- admpfr
-- ado
-- ado_all
-- ado_mysql
-- ado_postgresql
-- ado_sqlite
-- aflex
-- agpl
-- aho_corasick
-- aicwl
-- ajunitgen
-- akt
-- ali_parse
-- alr2appimage
-- amqp
-- anagram
-- ansiada
-- aoa_22
-- aoa_23
-- aor_jsona
-- apdf
-- are
-- asfml
-- ashell
-- asis
-- astro
-- atari_atr_tools
-- atari_exe_tools
-- atomic
-- audio_base
-- audio_wavefiles
-- aunit
-- automate
-- avltrees
-- avrada_examples
-- avrada_lib
-- avrada_mcu
-- avrada_rts
-- awa
-- awa_unit
-- aws
-- axmpp
-- ayacc
-- azip
-- b2ssum
-- bar_code_drawing
-- bar_codes
-- bare_runtime
-- basalt
-- base32
-- base64
-- bb_pico_bsp
-- bbqueue
-- bbs
-- bbs_ansiterm
-- bbs_embed_common
-- bbs_embed_linux
-- bbs_lisp
-- bbs_simcpu
-- bbs_webif
-- bbt
-- bfdada
-- bigints
-- binary_trees
-- bingada
-- bit_sets
-- blake2s
-- blink_led_arduino_due
-- blink_led_blackpill_stm32f401
-- blink_led_weact_stm32g474
-- blinkenlights
-- bme280
-- brackelib
-- braillart
-- button_led_arduino_due
-- button_led_blackpill_stm32f401
-- button_led_weact_stm32g474
-- byteflippers
-- c_strings
-- canberra_ada
-- cards
-- cashe
-- cbsg
-- cgk
-- chacha20
-- checksum
-- cheddar
-- chests
-- chipmunk2d
-- clic
-- cmd_ada
-- coap_client
-- coap_spark
-- cobs
-- conic_fit
-- controlled_io
-- cortex_m
-- crc_32
-- cre8or_generic_image_handling
-- cre8or_generic_image_handling_example
-- czmq_ada
-- dashera
-- db_maker
-- dcf
-- dependency_graph_extractor
-- dg_loada
-- dir_iterators
-- dirty_booleans
-- distance
-- dotenv
-- dummyserver
-- dynamo
-- eagle_lander
-- easy_graphics
-- edc_client
-- eeprom_i2c
-- elada
-- elevator
-- elogs
-- emacs_ada_mode
-- emacs_gpr_mode
-- emacs_gpr_query
-- emacs_wisi
-- emacs_wisitoken_grammar_mode
-- embedded_components
-- embedded_nrf52832
-- embedded_nrf52833
-- embedded_nrf52840
-- embedded_rp2040
-- embedded_rp2350
-- embedded_stm32f0xx
-- embedded_stm32g0xx
-- embedded_stm32g4xx
-- emdee
-- emojis
-- encryption_utilities
-- endianness
-- enet
-- enet_stm32
-- ephemeris
-- epoll
-- esp_idf
-- ethernet
-- euler_tools
-- evdev
-- ews
-- excel_writer
-- exsytrawo
-- fastpbkdf2_ada
-- felix
-- file_formats_java_class
-- florist_blady
-- flux
-- format_strings
-- freetypeada
-- functional
-- garlic
-- geo_coords
-- geste
-- geste_examples
-- get_password
-- getada
-- getopt
-- gettext
-- gfx_core
-- gfx_rasteriser
-- gid
-- globe_3d
-- gnat_arm_elf
-- gnat_avr_elf
-- gnat_math_extensions
-- gnat_native
-- gnat_riscv64_elf
-- gnat_xtensa_esp32_elf
-- gnatcoll
-- gnatcoll_gmp
-- gnatcoll_iconv
-- gnatcoll_lzma
-- gnatcoll_minimal
-- gnatcoll_omp
-- gnatcoll_postgres
-- gnatcoll_python
-- gnatcoll_python3
-- gnatcoll_readline
-- gnatcoll_sql
-- gnatcoll_sqlite
-- gnatcoll_syslog
-- gnatcoll_xref
-- gnatcoll_zlib
-- gnatcov
-- gnatdist_garlic
-- gnatdoc
-- gnatformat
-- gnatprove
-- gnoga
-- gpr_unit_provider
-- gprbuild
-- gsl
-- gtkada
-- gwindows
-- hac
-- hal
-- hangman
-- hello
-- hex_format
-- hex_string
-- hexapod_simulation_telemetry
-- hirtos
-- hirtos_separation_kernel
-- hmac
-- hmc5883
-- hnumerics
-- honki_tonks_zivilisationen
-- hostarm
-- hp41cx_tools
-- hungarian
-- hybrid_app_ada
-- hybrid_lib_ada
-- image_io
-- image_random
-- ini_files
-- inotify
-- intl
-- io_utils
-- iso
-- iterators
-- itsybitsy_bsp
-- itsybitsy_rp2040_bsp
-- j2ada
-- jintp
-- journada
-- json
-- jupyter_kernel
-- jwt
-- keypadder
-- keystoreada
-- labs_radar
-- labs_solar_system
-- labs_standalone
-- lace
-- lace_box2d
-- lace_bullet
-- lace_c_math
-- lace_collada
-- lace_gel
-- lace_gel_animation_demo
-- lace_gel_full_demo
-- lace_math
-- lace_opengl
-- lace_physics
-- lace_shared
-- lace_swig
-- lace_xml
-- lal_highlight
-- lal_refactor
-- langkit_support
-- lea
-- learnadainy
-- levenshtein_distance
-- libadalang
-- libadalang2xml
-- libadalang_tools
-- libcrc
-- libgnatdoc
-- libgnatformat
-- libgpr
-- libgpr2
-- libhello
-- libkeccak
-- liblal_refactor
-- libsimpleio
-- light_arduino_due
-- light_blackpill_stm32f401
-- light_fk723m1_zgt6
-- light_nrf52832
-- light_nrf52833
-- light_nrf52840
-- light_stm32f0xx
-- light_stm32g0xx
-- light_stm32g4xx
-- light_tasking_nrf52832
-- light_tasking_nrf52833
-- light_tasking_nrf52840
-- light_tasking_rp2040
-- light_tasking_rp2350
-- light_tasking_stm32f0xx
-- light_tasking_stm32g0xx
-- light_tasking_stm32g4xx
-- light_weact_stm32g474
-- lined
-- linenoise_ada
-- linux_hal
-- lispcli
-- list_image
-- littlefs
-- lmdb_ada
-- lml
-- loadcpm
-- loga
-- lsystem_editor
-- ltp_305
-- lvgl_ada
-- lvgl_ada_examples
-- lvgl_ada_simulator
-- lwt
-- lzmada
-- mage
-- mage_hat
-- magicada
-- mandelbrot_ascii
-- markdown
-- mathpaqs
-- matreshka_amf
-- matreshka_amf_dd
-- matreshka_amf_mofext
-- matreshka_amf_ocl
-- matreshka_amf_uml
-- matreshka_amf_utp
-- matreshka_fastcgi
-- matreshka_league
-- matreshka_servlet
-- matreshka_soap
-- matreshka_soap_wsse
-- matreshka_spikedog_api
-- matreshka_spikedog_awsd
-- matreshka_spikedog_core
-- matreshka_sql
-- matreshka_sql_firebird
-- matreshka_sql_mysql
-- matreshka_sql_oracle
-- matreshka_sql_postgresql
-- matreshka_sql_sqlite3
-- matreshka_xml
-- mavlink_common
-- mcp2221
-- mcp9808_i2c
-- mdshow
-- microbit_bsp
-- microbit_examples
-- midi
-- mine_detector
-- minimal_containers
-- minirest
-- minisamd51_bsp
-- minisamd51_example
-- mold
-- mold_lib
-- mos6502_create_led
-- mos6502_create_nop
-- mos6502_create_reset
-- mqttlib
-- muntsos_aarch64
-- muntsos_beaglebone
-- muntsos_raspberrypi1
-- muntsos_raspberrypi2
-- muntsos_raspberrypi3
-- muntsos_raspberrypi4
-- muntsos_raspberrypi5
-- musicplayer
-- ncursesada
-- nmea_0183
-- noise_nugget_sdk
-- nrf5x_hal
-- ocarina_lib
-- octet_memory_stream
-- openai
-- openapi
-- openapi_server
-- openglada
-- openglada_glfw
-- openglada_images
-- openglada_text
-- opentoken
-- optional
-- orka
-- orka_awt
-- orka_egl
-- orka_numerics
-- orka_opengl
-- orka_plugin_archives
-- orka_plugin_atmosphere
-- orka_plugin_gltf
-- orka_plugin_terrain
-- orka_simd
-- orka_tensors_cpu
-- orka_tensors_gpu
-- orka_tools
-- orka_transforms
-- orka_types
-- pager2
-- parallelize
-- parse_args
-- partord
-- password_gen
-- pbkdf2
-- phcpack
-- pico_bsp
-- pico_examples
-- pico_ultrasonic_ranger
-- pla_util
-- play_2048
-- portable_minimal_ada_rts
-- powerjoular
-- ppa_gtkada
-- ppag
-- pragmarc
-- press_utils
-- prettier_ada
-- printer_toolkit
-- program_proofs_in_spark
-- progress_indicators
-- prolog
-- protobuf
-- ptf
-- pygamer_bsp
-- pygamer_simulator
-- qmc5883
-- qoi
-- qplt
-- rabbitmq
-- raiden
-- raspberry_bsp
-- raylib
-- rclada
-- rclada_examples
-- rejuvenation
-- remoteio
-- resources
-- rewriters
-- rp2040_hal
-- rpio
-- rsfile
-- rtmidi
-- rxada
-- saatana
-- samd51_hal
-- scatcdsk_lib
-- sciada
-- scripted_testing
-- sdlada
-- secretada
-- security
-- semantic_versioning
-- septum
-- serverfaces
-- serverfaces_unit
-- servletada
-- servletada_aws
-- servletada_ews
-- servletada_unit
-- sh1107
-- sha1
-- sha2
-- shoot_n_loot
-- si_units
-- simcpucli
-- simh_tapes
-- simple_components
-- simple_logging
-- simple_regex
-- slip
-- snow
-- socketcan
-- softdev
-- spark_math
-- spark_unbound
-- sparkfun_qwiic_motor_driver
-- sparknacl
-- spat
-- spawn
-- spawn_glib
-- spdx
-- spdx_tool
-- specfun
-- splitter
-- spoon
-- st7789
-- startup_gen
-- stephes_ada_library
-- stm32f0x2_hal
-- stopwatch
-- strategy
-- suika_programing
-- svd2ada
-- swan
-- system_random
-- tash
-- task_coroutines
-- templates_parser
-- testlog
-- texcad
-- texts
-- tiled_code_gen
-- tiny_rp2040_bsp
-- tiny_text
-- tlsada
-- toml_slicer
-- trendy_terminal
-- trendy_test
-- tresses
-- tzif
-- ulid
-- umwi
-- universal_text_file
-- uri_ada
-- uri_mime
-- usb_embedded
-- utf8test
-- utilada
-- utilada_aws
-- utilada_curl
-- utilada_lzma
-- utilada_unit
-- utilada_xml
-- uuids
-- uxstrings
-- vanilla
-- vaton
-- virtapu
-- vss
-- vss_extra
-- vss_text
-- wayland_ada_info
-- wayland_ada_scanner
-- wayland_client_ada
-- wayland_cursor_ada
-- wayland_egl_ada
-- wayland_protocols_ada
-- webdriver
-- webif_example
-- weechat_ada
-- whitakers_words
-- wikiada
-- wikibook
-- win32ada
-- wioe5_ham1
-- wioe5_ham2
-- wioe5_p2p
-- wisitoken
-- wl_lib
-- wolfssl
-- wordle
-- wordlelib
-- wordlist
-- workers
-- x1804
-- xdg_base_dir
-- xia
-- xml_ez_out
-- xmlada
-- xoshiro
-- yass
-- yeison
-- yeison_12
-- z_compression
-- zeromq_ada
-- zipada
-- zipdcf
-- zlib_ada
-- zoneinfo
+  a0b_armv7m:
+    last_version: 0.4.0
+  a0b_armv7m_systick_clock:
+    last_version: 0.1.0
+  a0b_armv7m_systick_clock_timer:
+    last_version: 0.1.0
+  a0b_atsam3x8e:
+    last_version: 0.4.0
+  a0b_atsam3x8e_gpio:
+    last_version: 0.1.0
+  a0b_atsam3x8e_tc5_timer:
+    last_version: 0.1.0
+  a0b_atsam3x8e_twi_i2c:
+    last_version: 0.1.0
+  a0b_base:
+    last_version: 0.4.0
+  a0b_callbacks:
+    last_version: 0.2.0
+  a0b_exti:
+    last_version: 0.1.0
+  a0b_gpio:
+    last_version: 0.1.0
+  a0b_i2c:
+    last_version: 0.1.0
+  a0b_stm32f2_generic_exti:
+    last_version: 0.1.0
+  a0b_stm32f2_generic_gpio:
+    last_version: 0.1.0
+  a0b_stm32f401:
+    last_version: 0.3.0
+  a0b_stm32f401_dma:
+    last_version: 0.1.0
+  a0b_stm32f401_gpio:
+    last_version: 0.1.0
+  a0b_stm32f401_i2c:
+    last_version: 0.1.0
+  a0b_stm32f401_tim11_timer:
+    last_version: 0.1.0
+  a0b_stm32g4:
+    last_version: 0.1.0
+  a0b_stm32g474:
+    last_version: 0.2.0
+  a0b_stm32g474_gpio:
+    last_version: 0.1.0
+  a0b_stm32g4_gpio:
+    last_version: 0.1.0
+  a0b_stm32h723:
+    last_version: 0.1.0
+  a0b_time:
+    last_version: 0.2.0
+  a0b_timer:
+    last_version: 0.1.0
+  a0b_tools:
+    last_version: 0.1.0
+  aaa:
+    last_version: 0.3.0
+  aaa_texts:
+    last_version: 0.3.0
+  aarch64_baremetal_ada:
+    last_version: 1.0.0
+  ada_caser:
+    last_version: 0.1.0
+  ada_fuse:
+    last_version: 1.0.1
+  ada_gui:
+    last_version: 20240224.0.1
+  ada_language_server:
+    last_version: 25.0.0
+  ada_lua:
+    last_version: 0.1.0
+  ada_pretty:
+    last_version: 1.0.0
+  ada_sqlite3:
+    last_version: 0.1.1
+  ada_toml:
+    last_version: 0.5.0
+  ada_voxel_space_demo:
+    last_version: 1.0.1
+  adabots:
+    last_version: 2.0.0
+  adacl:
+    last_version: 7.0.1
+  adacl_aunit:
+    last_version: 7.0.1
+  adacl_eastrings:
+    last_version: 7.0.1
+  adacl_regexp:
+    last_version: 7.0.1
+  adacl_sar:
+    last_version: 7.0.1
+  adagl_gtk3:
+    last_version: 0.0.1
+  adare_dilithium5:
+    last_version: 0.2.3
+  adare_hqc256:
+    last_version: 0.2.3
+  adasat:
+    last_version: 26.0.0
+  adayaml:
+    last_version: 0.3.0
+  adl_middleware:
+    last_version: 0.4.0
+  admpfr:
+    last_version: 4.1.0+20220920
+  ado:
+    last_version: 2.5.0
+  ado_all:
+    last_version: 2.5.0
+  ado_mysql:
+    last_version: 2.5.0
+  ado_postgresql:
+    last_version: 2.5.0
+  ado_sqlite:
+    last_version: 2.5.0
+  aflex:
+    last_version: '1.7'
+  agpl:
+    last_version: 1.0.0
+  aho_corasick:
+    last_version: 0.3.0
+  aicwl:
+    last_version: 3.24.1
+  ajunitgen:
+    last_version: 1.0.1
+  akt:
+    last_version: 1.4.2
+  ali_parse:
+    last_version: 1.0.0
+  alr2appimage:
+    last_version: 1.0.0
+  amqp:
+    last_version: 0.3.1
+  anagram:
+    last_version: 1.0.0
+  ansiada:
+    last_version: 1.1.0
+  aoa_22:
+    last_version: '20220720'
+  aoa_23:
+    last_version: '20230119'
+  aor_jsona:
+    last_version: 1.6.6
+  apdf:
+    last_version: 8.0.0
+  are:
+    last_version: 1.5.1
+  asfml:
+    last_version: 2.6.1
+  ashell:
+    last_version: 1.3.0
+  asis:
+    last_version: 2019.0.0
+  astro:
+    last_version: 1.4.1
+  atari_atr_tools:
+    last_version: 1.5.1
+  atari_exe_tools:
+    last_version: 1.5.1
+  atomic:
+    last_version: 1.0.0
+  audio_base:
+    last_version: 1.0.0
+  audio_wavefiles:
+    last_version: 2.0.0
+  aunit:
+    last_version: 26.0.0
+  automate:
+    last_version: 3.0.0
+  avltrees:
+    last_version: 0.1.0
+  avrada_examples:
+    last_version: 1.0.1
+  avrada_lib:
+    last_version: 2.1.0
+  avrada_mcu:
+    last_version: 2.2.0
+  avrada_rts:
+    last_version: 2.0.1
+  awa:
+    last_version: 2.5.0
+  awa_unit:
+    last_version: 2.5.0
+  aws:
+    last_version: 25.2.0
+  axmpp:
+    last_version: 1.0.0
+  ayacc:
+    last_version: 1.4.1
+  azip:
+    last_version: 2.7.1
+  b2ssum:
+    last_version: 0.1.3
+  bar_code_drawing:
+    last_version: '20240701'
+  bar_codes:
+    last_version: 6.0.0
+  bare_runtime:
+    last_version: 14.0.0
+  basalt:
+    last_version: 0.3.0
+  base32:
+    last_version: 1.0.1
+  base64:
+    last_version: 1.0.1
+  bb_pico_bsp:
+    last_version: 0.1.0
+  bbqueue:
+    last_version: 1.0.0
+  bbs:
+    last_version: 0.1.0
+  bbs_ansiterm:
+    last_version: 0.1.0
+  bbs_embed_common:
+    last_version: 0.2.0
+  bbs_embed_linux:
+    last_version: 0.2.0
+  bbs_lisp:
+    last_version: 0.2.2
+  bbs_simcpu:
+    last_version: 0.4.0
+  bbs_webif:
+    last_version: 0.1.0
+  bbt:
+    last_version: 0.2.0
+  bfdada:
+    last_version: 1.3.1
+  bigints:
+    last_version: 0.1.0
+  binary_trees:
+    last_version: '20240519'
+  bingada:
+    last_version: 1.0.0
+  bit_sets:
+    last_version: 1.0.0
+  blake2s:
+    last_version: 0.1.3
+  blink_led_arduino_due:
+    last_version: 0.1.0
+  blink_led_blackpill_stm32f401:
+    last_version: 0.1.0
+  blink_led_weact_stm32g474:
+    last_version: 0.1.0
+  blinkenlights:
+    last_version: 0.3.0
+  bme280:
+    last_version: 1.0.0
+  brackelib:
+    last_version: 0.0.2
+  braillart:
+    last_version: 0.1.0
+  button_led_arduino_due:
+    last_version: 0.1.0
+  button_led_blackpill_stm32f401:
+    last_version: 0.1.0
+  button_led_weact_stm32g474:
+    last_version: 0.1.0
+  byteflippers:
+    last_version: 1.1.0
+  c_strings:
+    last_version: 1.1.0
+  canberra_ada:
+    last_version: 2.0.2
+  cards:
+    last_version: 1.0.0
+  cashe:
+    last_version: 1.0.0
+  cbsg:
+    last_version: 0.0.2
+  cgk:
+    last_version: 0.1.0
+  chacha20:
+    last_version: 0.1.0
+  checksum:
+    last_version: 0.1.0
+  cheddar:
+    last_version: 3.3.0
+  chests:
+    last_version: 0.2.0
+  chipmunk2d:
+    last_version: 0.1.0
+  clic:
+    last_version: 0.3.0
+  cmd_ada:
+    last_version: 0.0.1
+  coap_client:
+    last_version: 0.10.0
+  coap_spark:
+    last_version: 0.10.0
+  cobs:
+    last_version: 1.1.0
+  conic_fit:
+    last_version: 0.1.0
+  controlled_io:
+    last_version: 20240401.0.1
+  cortex_m:
+    last_version: 1.1.0
+  crc_32:
+    last_version: 20240725.0.0
+  cre8or_generic_image_handling:
+    last_version: 1.0.0
+  cre8or_generic_image_handling_example:
+    last_version: 1.0.0
+  czmq_ada:
+    last_version: 0.1.0
+  dashera:
+    last_version: 0.15.1
+  db_maker:
+    last_version: '20240119'
+  dcf:
+    last_version: 2.0.3
+  dependency_graph_extractor:
+    last_version: 22.0.0
+  dg_loada:
+    last_version: 1.4.3
+  dir_iterators:
+    last_version: 0.0.5
+  dirty_booleans:
+    last_version: 0.1.0
+  distance:
+    last_version: 0.1.0
+  dotenv:
+    last_version: 1.0.0
+  dummyserver:
+    last_version: 1.0.0
+  dynamo:
+    last_version: 1.4.0
+  eagle_lander:
+    last_version: 1.2.0
+  easy_graphics:
+    last_version: 0.1.0
+  edc_client:
+    last_version: 1.5.2
+  eeprom_i2c:
+    last_version: 8.0.1
+  elada:
+    last_version: 1.8.8
+  elevator:
+    last_version: 1.0.0
+  elogs:
+    last_version: 1.3.2
+  emacs_ada_mode:
+    last_version: 8.1.0
+  emacs_gpr_mode:
+    last_version: 1.0.5
+  emacs_gpr_query:
+    last_version: 1.0.2
+  emacs_wisi:
+    last_version: 4.3.2
+  emacs_wisitoken_grammar_mode:
+    last_version: 1.3.0
+  embedded_components:
+    last_version: 0.4.0
+  embedded_nrf52832:
+    last_version: 15.0.0
+  embedded_nrf52833:
+    last_version: 15.0.0
+  embedded_nrf52840:
+    last_version: 15.0.0
+  embedded_rp2040:
+    last_version: 15.1.0
+  embedded_rp2350:
+    last_version: 15.1.0
+  embedded_stm32f0xx:
+    last_version: 15.0.0
+  embedded_stm32g0xx:
+    last_version: 15.0.0
+  embedded_stm32g4xx:
+    last_version: 15.0.0
+  emdee:
+    last_version: 0.2.2
+  emojis:
+    last_version: 1.0.1
+  encryption_utilities:
+    last_version: '20220701'
+  endianness:
+    last_version: 1.0.0
+  enet:
+    last_version: 1.0.0
+  enet_stm32:
+    last_version: 1.0.0
+  ephemeris:
+    last_version: 1.2.0
+  epoll:
+    last_version: 0.1.1
+  esp_idf:
+    last_version: 5.0.2-1
+  ethernet:
+    last_version: 1.0.0
+  euler_tools:
+    last_version: 1.3.0
+  evdev:
+    last_version: 2.0.2
+  ews:
+    last_version: 1.11.0
+  excel_writer:
+    last_version: 19.0.1
+  exsytrawo:
+    last_version: 2.0.0
+  fastpbkdf2_ada:
+    last_version: 2.0.0
+  felix:
+    last_version: 0.2.0
+  file_formats_java_class:
+    last_version: 7.0.0
+  florist_blady:
+    last_version: 6.1.0
+  flux:
+    last_version: 1.0.0
+  format_strings:
+    last_version: 1.0.0
+  freetypeada:
+    last_version: 0.1.0
+  functional:
+    last_version: 4.0.0
+  garlic:
+    last_version: 6.0.1
+  geo_coords:
+    last_version: 1.0.0
+  geste:
+    last_version: 1.1.0
+  geste_examples:
+    last_version: 1.0.1
+  get_password:
+    last_version: 1.0.0-rc
+  getada:
+    last_version: 1.0.1
+  getopt:
+    last_version: 2.0.0
+  gettext:
+    last_version: 25.9.3
+  gfx_core:
+    last_version: 0.1.0
+  gfx_rasteriser:
+    last_version: 0.1.0
+  gid:
+    last_version: 13.0.1
+  globe_3d:
+    last_version: 2025.04.18
+  gnat_arm_elf:
+    last_version: 15.2.1
+  gnat_avr_elf:
+    last_version: 15.2.1
+  gnat_math_extensions:
+    last_version: 1.2.0
+  gnat_native:
+    last_version: 15.2.1
+  gnat_riscv64_elf:
+    last_version: 15.2.1
+  gnat_xtensa_esp32_elf:
+    last_version: 15.2.1
+  gnatcoll:
+    last_version: 25.0.0
+  gnatcoll_gmp:
+    last_version: 25.0.0
+  gnatcoll_iconv:
+    last_version: 25.0.0
+  gnatcoll_lzma:
+    last_version: 25.0.0
+  gnatcoll_minimal:
+    last_version: 26.0.0
+  gnatcoll_omp:
+    last_version: 25.0.0
+  gnatcoll_postgres:
+    last_version: 25.0.0
+  gnatcoll_python:
+    last_version: 21.0.0
+  gnatcoll_python3:
+    last_version: 23.0.0
+  gnatcoll_readline:
+    last_version: 25.0.0
+  gnatcoll_sql:
+    last_version: 25.0.0
+  gnatcoll_sqlite:
+    last_version: 25.0.0
+  gnatcoll_syslog:
+    last_version: 25.0.0
+  gnatcoll_xref:
+    last_version: 25.0.0
+  gnatcoll_zlib:
+    last_version: 25.0.0
+  gnatcov:
+    last_version: 22.0.1
+  gnatdist_garlic:
+    last_version: 6.0.1
+  gnatdoc:
+    last_version: 25.2.0
+  gnatformat:
+    last_version: 25.0.0
+  gnatprove:
+    last_version: 15.1.0
+  gnoga:
+    last_version: 2.1.2
+  gpr_unit_provider:
+    last_version: 23.0.0
+  gprbuild:
+    last_version: 25.0.1
+  gsl:
+    last_version: 0.1.0
+  gtkada:
+    last_version: 25.0.1
+  gwindows:
+    last_version: 1.5.0
+  hac:
+    last_version: 0.42.0
+  hal:
+    last_version: 1.0.0
+  hangman:
+    last_version: 1.0.0
+  hello:
+    last_version: 1.0.2
+  hex_format:
+    last_version: 0.1.0
+  hex_string:
+    last_version: 0.1.0
+  hexapod_simulation_telemetry:
+    last_version: 0.0.1
+  hirtos:
+    last_version: 2.0.0
+  hirtos_separation_kernel:
+    last_version: 2.0.0
+  hmac:
+    last_version: 2.0.0
+  hmc5883:
+    last_version: 1.0.0
+  hnumerics:
+    last_version: 1.0.0
+  honki_tonks_zivilisationen:
+    last_version: 0.05.5305
+  hostarm:
+    last_version: 25.0.4
+  hp41cx_tools:
+    last_version: 1.8.8
+  hungarian:
+    last_version: 1.0.0
+  hybrid_app_ada:
+    last_version: 2.0.0
+  hybrid_lib_ada:
+    last_version: 2.0.0
+  image_io:
+    last_version: 20240725.0.0
+  image_random:
+    last_version: '20200720'
+  ini_files:
+    last_version: 11.0.0
+  inotify:
+    last_version: 2.0.1
+  intl:
+    last_version: 1.0.1
+  io_utils:
+    last_version: 1.0.0
+  iso:
+    last_version: 2.0.0
+  iterators:
+    last_version: 0.2.0
+  itsybitsy_bsp:
+    last_version: 0.0.4
+  itsybitsy_rp2040_bsp:
+    last_version: 1.0.0
+  j2ada:
+    last_version: 1.4.2
+  jintp:
+    last_version: 1.0.0
+  journada:
+    last_version: 1.0.0
+  json:
+    last_version: 6.0.0
+  jupyter_kernel:
+    last_version: 1.0.0
+  jwt:
+    last_version: 1.0.0
+  keypadder:
+    last_version: 0.3.0
+  keystoreada:
+    last_version: 1.4.2
+  labs_radar:
+    last_version: 1.0.0
+  labs_solar_system:
+    last_version: 1.2.0
+  labs_standalone:
+    last_version: 0.1.0
+  lace:
+    last_version: 0.1.0
+  lace_box2d:
+    last_version: 0.1.0
+  lace_bullet:
+    last_version: 0.1.0
+  lace_c_math:
+    last_version: 0.1.0
+  lace_collada:
+    last_version: 0.1.0
+  lace_gel:
+    last_version: 0.1.0
+  lace_gel_animation_demo:
+    last_version: 0.1.0
+  lace_gel_full_demo:
+    last_version: 0.1.0
+  lace_math:
+    last_version: 0.1.0
+  lace_opengl:
+    last_version: 0.1.0
+  lace_physics:
+    last_version: 0.1.0
+  lace_shared:
+    last_version: 0.1.0
+  lace_swig:
+    last_version: 0.1.0
+  lace_xml:
+    last_version: 0.1.0
+  lal_highlight:
+    last_version: 21.0.0
+  lal_refactor:
+    last_version: 25.0.0
+  langkit_support:
+    last_version: 25.0.0
+  lea:
+    last_version: 0.92.1
+  learnadainy:
+    last_version: 0.2.0
+  levenshtein_distance:
+    last_version: 1.0.0
+  libadalang:
+    last_version: 25.0.0
+  libadalang2xml:
+    last_version: 1.0.2
+  libadalang_tools:
+    last_version: 25.0.0
+  libcrc:
+    last_version: 1.0.0
+  libgnatdoc:
+    last_version: 25.2.0
+  libgnatformat:
+    last_version: 25.0.0
+  libgpr:
+    last_version: 26.0.0
+  libgpr2:
+    last_version: 25.0.0
+  libhello:
+    last_version: 1.0.1
+  libkeccak:
+    last_version: 3.0.0
+  liblal_refactor:
+    last_version: 25.0.0
+  libsimpleio:
+    last_version: 2.23808.1
+  light_arduino_due:
+    last_version: 0.3.0
+  light_blackpill_stm32f401:
+    last_version: 0.3.0
+  light_fk723m1_zgt6:
+    last_version: 0.2.0
+  light_nrf52832:
+    last_version: 15.0.0
+  light_nrf52833:
+    last_version: 15.0.0
+  light_nrf52840:
+    last_version: 15.0.0
+  light_stm32f0xx:
+    last_version: 15.0.0
+  light_stm32g0xx:
+    last_version: 15.0.0
+  light_stm32g4xx:
+    last_version: 15.0.0
+  light_tasking_nrf52832:
+    last_version: 15.0.0
+  light_tasking_nrf52833:
+    last_version: 15.0.0
+  light_tasking_nrf52840:
+    last_version: 15.0.0
+  light_tasking_rp2040:
+    last_version: 15.1.0
+  light_tasking_rp2350:
+    last_version: 15.1.0
+  light_tasking_stm32f0xx:
+    last_version: 15.0.0
+  light_tasking_stm32g0xx:
+    last_version: 15.0.0
+  light_tasking_stm32g4xx:
+    last_version: 15.0.0
+  light_weact_stm32g474:
+    last_version: 0.1.0
+  lined:
+    last_version: '20240419'
+  linenoise_ada:
+    last_version: 1.1.2
+  linux_hal:
+    last_version: 1.2.0
+  lispcli:
+    last_version: 0.1.1
+  list_image:
+    last_version: 1.0.0
+  littlefs:
+    last_version: 1.0.0
+  lmdb_ada:
+    last_version: 1.2.0
+  lml:
+    last_version: 0.1.0
+  loadcpm:
+    last_version: 0.2.1
+  loga:
+    last_version: 1.0.0
+  lsystem_editor:
+    last_version: 1.0.0
+  ltp_305:
+    last_version: 1.1.0
+  lvgl_ada:
+    last_version: 1.0.0
+  lvgl_ada_examples:
+    last_version: 0.1.0
+  lvgl_ada_simulator:
+    last_version: 1.0.0
+  lwt:
+    last_version: 1.2.0
+  lzmada:
+    last_version: 1.1.5
+  mage:
+    last_version: 0.6.1
+  mage_hat:
+    last_version: 0.3.0
+  magicada:
+    last_version: 1.0.1
+  mandelbrot_ascii:
+    last_version: 1.0.0
+  markdown:
+    last_version: 25.0.0
+  mathpaqs:
+    last_version: 20230121.0.0
+  matreshka_amf:
+    last_version: 21.0.0
+  matreshka_amf_dd:
+    last_version: 21.0.0
+  matreshka_amf_mofext:
+    last_version: 21.0.0
+  matreshka_amf_ocl:
+    last_version: 21.0.0
+  matreshka_amf_uml:
+    last_version: 21.0.0
+  matreshka_amf_utp:
+    last_version: 21.0.0
+  matreshka_fastcgi:
+    last_version: 21.0.0
+  matreshka_league:
+    last_version: 21.0.0
+  matreshka_servlet:
+    last_version: 21.0.0
+  matreshka_soap:
+    last_version: 21.0.0
+  matreshka_soap_wsse:
+    last_version: 21.0.0
+  matreshka_spikedog_api:
+    last_version: 21.0.0
+  matreshka_spikedog_awsd:
+    last_version: 21.0.0
+  matreshka_spikedog_core:
+    last_version: 21.0.0
+  matreshka_sql:
+    last_version: 21.0.0
+  matreshka_sql_firebird:
+    last_version: 21.0.0
+  matreshka_sql_mysql:
+    last_version: 21.0.0
+  matreshka_sql_oracle:
+    last_version: 21.0.0
+  matreshka_sql_postgresql:
+    last_version: 21.0.0
+  matreshka_sql_sqlite3:
+    last_version: 21.0.0
+  matreshka_xml:
+    last_version: 21.0.0
+  mavlink_common:
+    last_version: 1.0.0
+  mcp2221:
+    last_version: 2.22792.1
+  mcp9808_i2c:
+    last_version: 1.0.0
+  mdshow:
+    last_version: 1.0.0
+  microbit_bsp:
+    last_version: 0.2.1
+  microbit_examples:
+    last_version: 0.1.0
+  midi:
+    last_version: 1.0.0
+  mine_detector:
+    last_version: '20220720'
+  minimal_containers:
+    last_version: 1.2.1
+  minirest:
+    last_version: '0.2'
+  minisamd51_bsp:
+    last_version: 0.1.0
+  minisamd51_example:
+    last_version: 0.1.1
+  mold:
+    last_version: 1.1.0
+  mold_lib:
+    last_version: 2.3.1
+  mos6502_create_led:
+    last_version: 1.5.1
+  mos6502_create_nop:
+    last_version: 1.5.1
+  mos6502_create_reset:
+    last_version: 1.5.1
+  mqttlib:
+    last_version: 0.2.0
+  muntsos_aarch64:
+    last_version: 11.0.1
+  muntsos_beaglebone:
+    last_version: 9.1.0
+  muntsos_raspberrypi1:
+    last_version: 11.0.1
+  muntsos_raspberrypi2:
+    last_version: 9.1.0
+  muntsos_raspberrypi3:
+    last_version: 9.1.0
+  muntsos_raspberrypi4:
+    last_version: 9.1.0
+  muntsos_raspberrypi5:
+    last_version: 9.1.0
+  musicplayer:
+    last_version: '20210719'
+  ncursesada:
+    last_version: 6.5.0
+  nmea_0183:
+    last_version: 0.1.0
+  noise_nugget_sdk:
+    last_version: 2.0.0
+  nrf5x_hal:
+    last_version: 0.1.0
+  ocarina_lib:
+    last_version: 1.1.0-20070603
+  octet_memory_stream:
+    last_version: 1.1.0
+  openai:
+    last_version: 1.0.0
+  openapi:
+    last_version: 0.9.0
+  openapi_server:
+    last_version: 0.9.0
+  openglada:
+    last_version: 0.9.0
+  openglada_glfw:
+    last_version: 0.9.0
+  openglada_images:
+    last_version: 0.9.0
+  openglada_text:
+    last_version: 0.9.0
+  opentoken:
+    last_version: 6.0.3
+  optional:
+    last_version: 0.2.0
+  orka:
+    last_version: 1.0.0
+  orka_awt:
+    last_version: 1.0.0
+  orka_egl:
+    last_version: 1.0.0
+  orka_numerics:
+    last_version: 1.0.0
+  orka_opengl:
+    last_version: 1.0.0
+  orka_plugin_archives:
+    last_version: 1.0.0
+  orka_plugin_atmosphere:
+    last_version: 1.0.0
+  orka_plugin_gltf:
+    last_version: 1.0.0
+  orka_plugin_terrain:
+    last_version: 1.0.0
+  orka_simd:
+    last_version: 1.0.0
+  orka_tensors_cpu:
+    last_version: 1.0.0
+  orka_tensors_gpu:
+    last_version: 1.0.0
+  orka_tools:
+    last_version: 1.0.0
+  orka_transforms:
+    last_version: 1.0.0
+  orka_types:
+    last_version: 1.0.0
+  pager2:
+    last_version: 2.0.1
+  parallelize:
+    last_version: 1.0.0
+  parse_args:
+    last_version: 0.9.0
+  partord:
+    last_version: 1.0.0
+  password_gen:
+    last_version: '20220720'
+  pbkdf2:
+    last_version: 3.0.0
+  phcpack:
+    last_version: 2.4.88
+  pico_bsp:
+    last_version: 2.2.0
+  pico_examples:
+    last_version: 2.2.0
+  pico_ultrasonic_ranger:
+    last_version: 0.1.0
+  pla_util:
+    last_version: 2.1.3
+  play_2048:
+    last_version: 1.0.0
+  portable_minimal_ada_rts:
+    last_version: 1.0.0
+  powerjoular:
+    last_version: 1.0.4
+  ppa_gtkada:
+    last_version: 1.0.0
+  ppag:
+    last_version: 2.1.1
+  pragmarc:
+    last_version: '20240810'
+  press_utils:
+    last_version: 1.0.0
+  prettier_ada:
+    last_version: 25.0.0
+  printer_toolkit:
+    last_version: 0.3.0
+  program_proofs_in_spark:
+    last_version: 0.1.1
+  progress_indicators:
+    last_version: 0.0.1
+  prolog:
+    last_version: 1.0.0
+  protobuf:
+    last_version: 1.0.0
+  ptf:
+    last_version: 1.2.2
+  pygamer_bsp:
+    last_version: 1.0.0
+  pygamer_simulator:
+    last_version: 1.0.0
+  qmc5883:
+    last_version: 1.0.0
+  qoi:
+    last_version: 0.1.0
+  qplt:
+    last_version: '20230720'
+  rabbitmq:
+    last_version: 0.1.0
+  raiden:
+    last_version: 1.0.0
+  raspberry_bsp:
+    last_version: 1.0.0
+  raylib:
+    last_version: 1.0.1
+  rclada:
+    last_version: 0.1.0
+  rclada_examples:
+    last_version: 0.1.0
+  rejuvenation:
+    last_version: 23.0.0
+  remoteio:
+    last_version: 2.23808.1
+  resources:
+    last_version: 0.1.0
+  rewriters:
+    last_version: 23.0.0
+  rp2040_hal:
+    last_version: 2.6.0
+  rpio:
+    last_version: 1.0.0
+  rsfile:
+    last_version: 1.0.1
+  rtmidi:
+    last_version: 0.1.0
+  rxada:
+    last_version: 0.1.1
+  saatana:
+    last_version: 2.0.2
+  samd51_hal:
+    last_version: 0.3.0
+  scatcdsk_lib:
+    last_version: 1.0.0
+  sciada:
+    last_version: 0.4.0
+  scripted_testing:
+    last_version: 2.0.0
+  sdlada:
+    last_version: 2.5.20
+  secretada:
+    last_version: 1.0.0
+  security:
+    last_version: 1.5.1
+  semantic_versioning:
+    last_version: '2.1'
+  septum:
+    last_version: 0.0.8
+  serverfaces:
+    last_version: 1.6.1
+  serverfaces_unit:
+    last_version: 1.6.1
+  servletada:
+    last_version: 1.8.1
+  servletada_aws:
+    last_version: 1.8.1
+  servletada_ews:
+    last_version: 1.8.1
+  servletada_unit:
+    last_version: 1.8.1
+  sh1107:
+    last_version: 1.2.2
+  sha1:
+    last_version: 2.0.0
+  sha2:
+    last_version: 2.0.0
+  shoot_n_loot:
+    last_version: 1.0.0
+  si_units:
+    last_version: 0.2.0
+  simcpucli:
+    last_version: 0.4.0
+  simh_tapes:
+    last_version: 0.1.1
+  simple_components:
+    last_version: 4.68.0
+  simple_logging:
+    last_version: 1.2.0
+  simple_regex:
+    last_version: 0.1.0
+  slip:
+    last_version: 0.0.1
+  snow:
+    last_version: 1.0.0
+  socketcan:
+    last_version: 1.0.0
+  softdev:
+    last_version: 1.2.0
+  spark_math:
+    last_version: 0.1.0
+  spark_unbound:
+    last_version: 0.2.1
+  sparkfun_qwiic_motor_driver:
+    last_version: 0.1.0
+  sparknacl:
+    last_version: 4.0.1
+  spat:
+    last_version: 1.3.0
+  spawn:
+    last_version: 25.0.0
+  spawn_glib:
+    last_version: 25.0.0
+  spdx:
+    last_version: 0.2.0
+  spdx_tool:
+    last_version: 0.4.1
+  specfun:
+    last_version: 1.0.0
+  splitter:
+    last_version: 1.0.2
+  spoon:
+    last_version: 1.0.1
+  st7789:
+    last_version: 0.1.0
+  startup_gen:
+    last_version: 25.0.0
+  stephes_ada_library:
+    last_version: 3.7.3
+  stm32f0x2_hal:
+    last_version: 0.1.0
+  stopwatch:
+    last_version: 0.1.0
+  strategy:
+    last_version: 0.1.0
+  suika_programing:
+    last_version: 0.1.0
+  svd2ada:
+    last_version: 0.1.0
+  swan:
+    last_version: 0.2.0
+  system_random:
+    last_version: 1.0.0
+  tash:
+    last_version: 8.7.2
+  task_coroutines:
+    last_version: 0.1.0
+  templates_parser:
+    last_version: 25.0.0
+  testlog:
+    last_version: '1.0'
+  texcad:
+    last_version: 4.5.3
+  texts:
+    last_version: 0.1.0
+  tiled_code_gen:
+    last_version: 0.1.0
+  tiny_rp2040_bsp:
+    last_version: 1.0.0
+  tiny_text:
+    last_version: 1.5.1
+  tlsada:
+    last_version: 2.5.2
+  toml_slicer:
+    last_version: 0.1.2
+  trendy_terminal:
+    last_version: 0.0.5
+  trendy_test:
+    last_version: 0.0.4
+  tresses:
+    last_version: 2.0.0
+  tzif:
+    last_version: 3.0.3
+  ulid:
+    last_version: 20240921.0.0
+  umwi:
+    last_version: 0.1.0
+  universal_text_file:
+    last_version: '20220720'
+  uri_ada:
+    last_version: '2.0'
+  uri_mime:
+    last_version: 1.4.0
+  usb_embedded:
+    last_version: 1.0.1
+  utf8test:
+    last_version: 0.1.0
+  utilada:
+    last_version: 2.8.2
+  utilada_aws:
+    last_version: 2.8.2
+  utilada_curl:
+    last_version: 2.8.2
+  utilada_lzma:
+    last_version: 2.8.2
+  utilada_unit:
+    last_version: 2.8.2
+  utilada_xml:
+    last_version: 2.8.2
+  uuids:
+    last_version: 1.0.0
+  uxstrings:
+    last_version: 0.9.0+alpha-20250903
+  vanilla:
+    last_version: 0.9.8
+  vaton:
+    last_version: 0.1.0
+  virtapu:
+    last_version: 0.2.0
+  vss:
+    last_version: 25.0.0
+  vss_extra:
+    last_version: 26.0.0
+  vss_text:
+    last_version: 26.0.0
+  wayland_ada_info:
+    last_version: 1.0.0
+  wayland_ada_scanner:
+    last_version: 1.0.0
+  wayland_client_ada:
+    last_version: 1.0.0
+  wayland_cursor_ada:
+    last_version: 1.0.0
+  wayland_egl_ada:
+    last_version: 1.0.0
+  wayland_protocols_ada:
+    last_version: 1.0.0
+  webdriver:
+    last_version: 1.0.0
+  webif_example:
+    last_version: 0.1.0
+  weechat_ada:
+    last_version: 3.0.1
+  whitakers_words:
+    last_version: 0.20240801.0
+  wikiada:
+    last_version: 1.5.0
+  wikibook:
+    last_version: 1.0.1
+  win32ada:
+    last_version: 23.0.0
+  wioe5_ham1:
+    last_version: 1.23340.1
+  wioe5_ham2:
+    last_version: 1.23340.1
+  wioe5_p2p:
+    last_version: 1.23340.1
+  wisitoken:
+    last_version: 4.2.1
+  wl_lib:
+    last_version: 0.1.4
+  wolfssl:
+    last_version: 5.8.4
+  wordle:
+    last_version: 0.1.1
+  wordlelib:
+    last_version: 0.1.0
+  wordlist:
+    last_version: 0.1.3
+  workers:
+    last_version: 0.1.0
+  x1804:
+    last_version: 1.0.2
+  xdg_base_dir:
+    last_version: 1.0.0
+  xia:
+    last_version: 1.4.1
+  xml_ez_out:
+    last_version: 1.6.0
+  xmlada:
+    last_version: 26.0.0
+  xoshiro:
+    last_version: 2.0.0
+  yass:
+    last_version: 3.1.0
+  yeison:
+    last_version: 0.1.0
+  yeison_12:
+    last_version: 0.2.0
+  z_compression:
+    last_version: 20240724.0.0
+  zeromq_ada:
+    last_version: 4.1.5
+  zipada:
+    last_version: 61.0.0
+  zipdcf:
+    last_version: 2.0.3
+  zlib_ada:
+    last_version: 1.3.0
+  zoneinfo:
+    last_version: 1.1.1

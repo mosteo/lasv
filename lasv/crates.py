@@ -1,3 +1,6 @@
+from lasv_main import LasvContext
+
+
 def list(context : 'LasvContext'):
     """
     Do nothing if context already contains a non-empty 'crates' list.
@@ -28,7 +31,7 @@ def list(context : 'LasvContext'):
         context.data['crates'] = []
         return
 
-    crates_list = []
+    crates_list = {}
 
     # Go over crate.name and use `alr show` to check if it is binary. A crate
     # is binary if its 'origin' contains a 'case(*)' key.
@@ -53,7 +56,11 @@ def list(context : 'LasvContext'):
             if is_binary:
                 continue
 
-            crates_list.append(crate_name)
+            # Add the 'version' field under the crate name, as 'last_version'
+            crate_entry = {}
+            crate_entry['last_version'] = show_info.get('version')
+
+            crates_list[crate_name] = crate_entry
 
         except Exception as e:
             if 'external' in show_result.stdout:
@@ -65,3 +72,21 @@ def list(context : 'LasvContext'):
     context.data['crates'] = crates_list
     context.save()
     print(f"Found {len(crates_list)} source crates with 2+ releases.")
+
+
+def process(context : 'LasvContext', target_crate : str = None) -> None:
+    """
+    For each crate in context's 'crates' list (or only target_crate if given),
+    find all pairs of consecutive releases and retrieve their sources.
+    """
+
+    crates_to_process = []
+    if target_crate:
+        crates_to_process = [target_crate]
+    else:
+        crates_to_process = context.data.get('crates', [])
+
+    for crate in crates_to_process:
+        print(f"Processing crate: {crate}")
+        from lasv import releases
+        releases.find_pairs(context, crate)
