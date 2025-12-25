@@ -38,6 +38,8 @@ def list(context : 'LasvContext'):
     for crate in tqdm(crates_info, desc="Identifying binary crates"):
         crate_name = crate.get('name')
         try:
+            crate_entry = {}
+
             show_result = subprocess.run(
                 ["alr", "--format", "show", crate_name],
                 capture_output=True,
@@ -46,32 +48,30 @@ def list(context : 'LasvContext'):
             )
             show_info = json.loads(show_result.stdout)
 
+            is_external = False
             is_binary = False
-            origins = show_info.get('origins', [])
+            origins = show_info.get('origin', [])
             for origin in origins:
                 if 'case(' in origin:
                     is_binary = True
                     break
 
-            if is_binary:
-                continue
-
             # Add the 'version' field under the crate name, as 'last_version'
-            crate_entry = {}
             crate_entry['last_version'] = show_info.get('version')
-
-            crates_list[crate_name] = crate_entry
 
         except Exception as e:
             if 'external' in show_result.stdout:
-                continue
+                is_external = True
             else:
                 print(f"Error checking crate {crate_name}: {e}")
-                continue
+        finally:
+            crate_entry['binary'] = is_binary
+            crate_entry['external'] = is_external
+            crates_list[crate_name] = crate_entry
 
     context.data['crates'] = crates_list
     context.save()
-    print(f"Found {len(crates_list)} source crates with 2+ releases.")
+    print(f"Found {len(crates_list)} source crates out of {len(crates_info)}.")
 
 
 def process(context : 'LasvContext', target_crate : str = None) -> None:
@@ -86,7 +86,11 @@ def process(context : 'LasvContext', target_crate : str = None) -> None:
     else:
         crates_to_process = context.data.get('crates', [])
 
+    total_pairs = 0
+
     for crate in crates_to_process:
         print(f"Processing crate: {crate}")
         from lasv import releases
-        releases.find_pairs(context, crate)
+        total_pairs += releases.find_pairs(context, crate)
+
+    print(f"Total release pairs: {total_pairs}")
