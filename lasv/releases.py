@@ -1,13 +1,45 @@
 import json
+import os
+import shutil
 import subprocess
 from lasv_main import LasvContext
 
 
-def retrieve(crate, v1, v2 : str) -> None:
+def retrieve(crate, version : str) -> None:
     """
     Retrieve two consecutive releases (given by their version strings).
     If not on disk, download them under 'releases/crate/'.
     """
+
+    # Find what path will alire use with get --dirname
+
+    result = subprocess.run(
+        ["alr", "get", "--dirname", f"{crate}={version}"],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+
+    # Skip if the destination already exists
+    dest_path = os.path.join("releases", crate, result.stdout.strip())
+    if os.path.exists(dest_path):
+        print(f"      Release {version} already on disk.")
+        return
+    parent_path = os.path.dirname(dest_path)
+    os.makedirs(parent_path, exist_ok=True)
+    try:
+        subprocess.run(
+            ["alr", "-C", parent_path, "get", "--only", f"{crate}={version}"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"      Error retrieving {crate}={version}: {e.stderr}")
+        # Clean up partial download
+        if os.path.exists(dest_path):
+            shutil.rmtree(dest_path)
+        return
 
 
 def find_pairs(context : 'LasvContext', crate : str) -> int:
@@ -58,7 +90,8 @@ def find_pairs(context : 'LasvContext', crate : str) -> int:
             v1 = prev_info.get('version')
             print(f"   Found pair: {v1} -> {v2}")
             found_count += 1
-            retrieve(crate, v1, v2)
+            retrieve(crate, v1)
+            retrieve(crate, v2)
             v2 = v1
 
         except Exception as e:
