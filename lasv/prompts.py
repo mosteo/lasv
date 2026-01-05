@@ -2,6 +2,19 @@
 This file contains prompts for the LLMs that perform the semver comparisons
 """
 
+COMMON_OUTPUT = """
+For every spec change detected, output only lines strictly adhering to these formats:
+
+MAJOR (line, col): description
+minor (line, col): description
+
+- Use "MAJOR" for backwards incompatible changes.
+- Use "minor" for backwards compatible additions or changes.
+- (line, col) should be the line and column number in the new file.
+- "description" must be a brief, one-line explanation of the reason for the classification.
+Do not emit any other text or summary.
+"""
+
 INSTRUCTIONS = {
     "simple": """
 You are a semantic versioning assistant. Compare the "OLD" and "NEW" Ada package specifications.
@@ -26,16 +39,3 @@ Ignorable changes:
 Report your findings using the format specified below.
 """ + COMMON_OUTPUT,
 }
-
-COMMON_OUTPUT = """
-For every spec change detected, output only lines strictly adhering to these formats:
-
-MAJOR (line, col): description
-minor (line, col): description
-
-- Use "MAJOR" for backwards incompatible changes.
-- Use "minor" for backwards compatible additions or changes.
-- (line, col) should be the line and column number in the new file.
-- "description" must be a brief, one-line explanation of the reason for the classification.
-Do not emit any other text or summary.
-"""

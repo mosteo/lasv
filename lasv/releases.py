@@ -1,9 +1,14 @@
+"""
+This module is responsible for handling and comparing different releases of Alire crates.
+"""
 import json
 import os
+import re
 import shutil
 import subprocess
-from lasv_main import LasvContext, ChangeType
 from typing import Optional
+
+from lasv_main import LasvContext, ChangeType
 
 
 def get_release_path(crate: str, version: str) -> str:
@@ -33,7 +38,7 @@ def get_specs(release_path: str) -> dict[str, str]:
     for subdir in ["src", "source"]:
         dir_path = os.path.join(release_path, subdir)
         if os.path.exists(dir_path):
-            for root, dirs, files in os.walk(dir_path):
+            for root, _, files in os.walk(dir_path):
                 for file in files:
                     if file.endswith(".ads"):
                         # We use file name as key. Ambiguity if same filename
@@ -65,7 +70,6 @@ def is_private_package(spec_path: str) -> bool:
 
         # Find positions of 'private' and 'package' keywords
         # Use word boundaries to avoid matching substrings
-        import re
         private_match = re.search(r'\bprivate\b', cleaned_content)
         package_match = re.search(r'\bpackage\b', cleaned_content)
 
@@ -73,7 +77,7 @@ def is_private_package(spec_path: str) -> bool:
             return private_match.start() < package_match.start()
 
         return False
-    except Exception:
+    except (FileNotFoundError, UnicodeDecodeError):
         return False
 
 
@@ -154,7 +158,6 @@ def compare_spec_files(context: 'LasvContext', crate: str, version: str,
         return
 
     # Both exist, so we will compare their content later.
-    pass
 
 
 def retrieve(crate, version : str) -> None:
@@ -184,7 +187,7 @@ def retrieve(crate, version : str) -> None:
         # dest_path might not be defined if first subprocess fails, handle carefully
         # But here we are inside try block where dest_path is computed.
         if 'dest_path' in locals() and os.path.exists(dest_path):
-             shutil.rmtree(dest_path)
+            shutil.rmtree(dest_path)
         return
 
 
@@ -228,7 +231,7 @@ def find_pairs(context : 'LasvContext', crate : str) -> int:
             if 'external' in prev_result.stdout:
                 print("   Skipping: external release.")
                 return found_count
-            elif 'Not found' in prev_result.stdout:
+            if 'Not found' in prev_result.stdout:
                 if found_count == 0:
                     print(f"   No release <{v2} found.")
                 return found_count
@@ -255,6 +258,7 @@ def find_pairs(context : 'LasvContext', crate : str) -> int:
 
             v2 = v1
 
-        except Exception as e:
+        except (subprocess.CalledProcessError, FileNotFoundError,
+                json.JSONDecodeError) as e:
             print(f"Error checking crate {crate}<{v2}: {e}")
             return found_count
