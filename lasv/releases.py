@@ -231,7 +231,7 @@ def find_pairs(context : 'LasvContext', crate : str) -> int:
             if 'external' in prev_result.stdout:
                 print("   Skipping: external release.")
                 return found_count
-            elif 'Not found' in prev_result.stdout:
+            if 'Not found' in prev_result.stdout:
                 if found_count == 0:
                     print(f"   No release <{v2} found.")
                 return found_count
