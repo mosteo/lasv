@@ -51,6 +51,10 @@ class LasvContext:
             with open(self.filename, "r", encoding="utf-8") as f:
                 loaded = yaml.safe_load(f)
                 self.data = loaded if loaded else {}
+
+        if 'crates' not in self.data:
+            self.data['crates'] = {}
+
         return self.data
 
     def clear_diagnosis(self, crate: str) -> None:

@@ -197,7 +197,7 @@ def retrieve(crate, version: str) -> None:
         # dest_path might not be defined if first subprocess fails, handle carefully
         # But here we are inside try block where dest_path is computed.
         if 'dest_path' in locals() and os.path.exists(dest_path):
-            shutil.rmtree(dest_path)
+            shutil.rmtree(dest_path, ignore_errors=True)
         return
 
 
