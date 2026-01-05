@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from typing import Optional
 
-from lasv_main import LasvContext, ChangeType
+from lasv_main import LasvContext, ChangeType, ChangeInfo
 from lasv import specs as specs_module
 
 
@@ -83,7 +83,7 @@ def is_private_package(spec_path: str) -> bool:
 
 
 def compare_specs(
-    context: "LasvContext", crate: str, v1: str, v2: str, model: str = None
+    context: "LasvContext", crate: str, v1: str, v2: str
 ) -> None:
     """
     Compare public specifications (*.ads files) between two releases to identify
@@ -112,7 +112,7 @@ def compare_specs(
     for spec in all_specs:
         p1 = specs_v1.get(spec)
         p2 = specs_v2.get(spec)
-        compare_spec_files(context, crate, v2, p1, p2, model)
+        compare_spec_files(context, crate, v2, p1, p2)
 
 
 def compare_spec_files(
@@ -121,7 +121,6 @@ def compare_spec_files(
     version: str,
     path1: Optional[str],
     path2: Optional[str],
-    model: str = None,
 ) -> None:
     """
     Compare two paths to the same *.ads file.
@@ -135,8 +134,9 @@ def compare_spec_files(
             # Private packages are not part of public API
             return
         # File added in v2. Minor change (backward compatible addition).
-        context.emit_change(crate, version, 'files', ChangeType.MINOR, 0, 0,
-                            f"Public spec file added: {os.path.basename(path2)}")
+        context.emit_change(crate, version, 'files',
+                            ChangeInfo(ChangeType.MINOR, 0, 0,
+                                       f"Public spec file added: {os.path.basename(path2)}"))
         return
 
     if path2 is None:
@@ -145,29 +145,30 @@ def compare_spec_files(
             # Private packages are not part of public API
             return
         # File removed in v2. Major change (backward incompatible removal).
-        context.emit_change(crate, version, 'files', ChangeType.MAJOR, 0, 0,
-                            f"Public spec file removed: {os.path.basename(path1)}")
+        context.emit_change(crate, version, 'files',
+                            ChangeInfo(ChangeType.MAJOR, 0, 0,
+                                       f"Public spec file removed: {os.path.basename(path1)}"))
         return
 
-    # if file exists in both, but is private only in one case, this affects
-    # the public API.
-    if is_private_package(path1) != is_private_package(path2):
-        if is_private_package(path1):
-            # Private packages are not part of public API, so this is a minor change.
-            context.emit_change(crate, version, 'files', ChangeType.MINOR, 0, 0,
-                                f"Public spec file added: {os.path.basename(path2)}")
-            return
-        # File removed in v2. Major change (backward incompatible removal).
-        context.emit_change(crate, version, 'files', ChangeType.MAJOR, 0, 0,
-                            f"Public spec file removed: {os.path.basename(path1)}")
-        return
+    # Both files exist - check privacy status
+    is_private_1 = is_private_package(path1)
+    is_private_2 = is_private_package(path2)
 
     # If both exist and private, no change.
-    if is_private_package(path1) and is_private_package(path2):
+    if is_private_1 and is_private_2:
         return
 
-    # Both exist, so we will compare their content later.
-    specs_module.compare_spec_content(context, crate, version, path1, path2, model)
+    # if file exists in both, but is private only in one case, this affects the public API.
+    if is_private_1 != is_private_2:
+        change_type = ChangeType.MINOR if is_private_1 else ChangeType.MAJOR
+        action = "added" if is_private_1 else "removed"
+        context.emit_change(crate, version, 'files',
+                            ChangeInfo(change_type, 0, 0,
+                                       f"Public spec file {action}: {os.path.basename(path2)}"))
+        return
+
+    # Both exist and are public, so we will compare their content.
+    specs_module.compare_spec_content(context, crate, version, path1, path2)
 
 
 def retrieve(crate, version: str) -> None:
@@ -197,11 +198,11 @@ def retrieve(crate, version: str) -> None:
         # dest_path might not be defined if first subprocess fails, handle carefully
         # But here we are inside try block where dest_path is computed.
         if 'dest_path' in locals() and os.path.exists(dest_path):
-            shutil.rmtree(dest_path)
+            shutil.rmtree(dest_path, ignore_errors=True)
         return
 
 
-def find_pairs(context: "LasvContext", crate: str, model: str = None) -> int:
+def find_pairs(context: "LasvContext", crate: str) -> int:
     """
     Find all pairs of consecutive releases for a given crate.
     For each pair, retrieve its sources using retrieve().
@@ -261,7 +262,7 @@ def find_pairs(context: "LasvContext", crate: str, model: str = None) -> int:
             context.clear_diagnosis(crate)
             context.start_diagnosis(crate, v2, "files")
 
-            compare_specs(context, crate, v1, v2, model)
+            compare_specs(context, crate, v1, v2)
 
             # Finish diagnosis for 'files' analyzer
             context.finish_diagnosis(crate, v1, v2, "files")
