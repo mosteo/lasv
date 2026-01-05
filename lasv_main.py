@@ -15,6 +15,7 @@ Input arguments: optional crate name to process only that crate.
 
 
 import os
+import sys
 import argparse
 from enum import Enum
 
@@ -212,6 +213,10 @@ def lasv_main():
         help="LLM model to use for analysis (optional)."
     )
     args = parser.parse_args()
+
+    if args.model and not os.environ.get("OPENROUTER_API_KEY"):
+        print("Error: --model requires OPENROUTER_API_KEY to be set.")
+        sys.exit(1)
 
     context = LasvContext()
     context.load()

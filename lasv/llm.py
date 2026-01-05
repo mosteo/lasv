@@ -14,9 +14,6 @@ def query_model(model: str, spec1_content: str, spec2_content: str) -> str:
     Query an LLM model through the OpenRouter API to compare two specs.
     """
     api_key = os.environ.get("OPENROUTER_API_KEY")
-    if not api_key:
-        print("Error: OPENROUTER_API_KEY environment variable not set.")
-        sys.exit(1)
 
     prompt = prompts.INSTRUCTIONS["simple"]
     user_content = f"OLD:\n{spec1_content}\n\nNEW:\n{spec2_content}"
