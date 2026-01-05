@@ -1,3 +1,6 @@
+"""
+This module is responsible for handling and comparing different releases of Alire crates.
+"""
 import json
 import os
 import re
@@ -35,7 +38,7 @@ def get_specs(release_path: str) -> dict[str, str]:
     for subdir in ["src", "source"]:
         dir_path = os.path.join(release_path, subdir)
         if os.path.exists(dir_path):
-            for root, dirs, files in os.walk(dir_path):
+            for root, _, files in os.walk(dir_path):
                 for file in files:
                     if file.endswith(".ads"):
                         # We use file name as key. Ambiguity if same filename

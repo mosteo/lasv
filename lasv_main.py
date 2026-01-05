@@ -25,11 +25,13 @@ from lasv import crates
 
 
 class ChangeType(Enum):
+    """Enumeration for the type of change."""
     MAJOR = "MAJOR"
     MINOR = "minor"
 
 
 class Compliance(Enum):
+    """Enumeration for compliance status."""
     STRICT = "strict"
     LAX = "lax"
     NO = "no"
@@ -198,7 +200,7 @@ def lasv_main():
     If a crate name is given as argument, process only that crate.
     """
     context = LasvContext()
-    data = context.load()
+    context.load()
 
     target_crate = sys.argv[1] if len(sys.argv) > 1 else None
 

@@ -1,3 +1,6 @@
+"""
+This module is responsible for comparing the content of two Ada package specifications.
+"""
 from lasv_main import LasvContext
 
 
