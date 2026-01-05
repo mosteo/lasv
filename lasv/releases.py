@@ -9,6 +9,7 @@ import subprocess
 from typing import Optional
 
 from lasv_main import LasvContext, ChangeType
+from lasv import specs as specs_module
 
 
 def get_release_path(crate: str, version: str) -> str:
@@ -81,7 +82,9 @@ def is_private_package(spec_path: str) -> bool:
         return False
 
 
-def compare_specs(context: 'LasvContext', crate: str, v1: str, v2: str) -> None:
+def compare_specs(
+    context: "LasvContext", crate: str, v1: str, v2: str, model: str = None
+) -> None:
     """
     Compare public specifications (*.ads files) between two releases to identify
     backwards compatible (minor bump) or incompatible (major bump) changes.
@@ -109,11 +112,17 @@ def compare_specs(context: 'LasvContext', crate: str, v1: str, v2: str) -> None:
     for spec in all_specs:
         p1 = specs_v1.get(spec)
         p2 = specs_v2.get(spec)
-        compare_spec_files(context, crate, v2, p1, p2)
+        compare_spec_files(context, crate, v2, p1, p2, model)
 
 
-def compare_spec_files(context: 'LasvContext', crate: str, version: str,
-                       path1: Optional[str], path2: Optional[str]) -> None:
+def compare_spec_files(
+    context: "LasvContext",
+    crate: str,
+    version: str,
+    path1: Optional[str],
+    path2: Optional[str],
+    model: str = None,
+) -> None:
     """
     Compare two paths to the same *.ads file.
 
@@ -158,9 +167,10 @@ def compare_spec_files(context: 'LasvContext', crate: str, version: str,
         return
 
     # Both exist, so we will compare their content later.
+    specs_module.compare_spec_content(context, crate, version, path1, path2, model)
 
 
-def retrieve(crate, version : str) -> None:
+def retrieve(crate, version: str) -> None:
     """
     Retrieve two consecutive releases (given by their version strings).
     If not on disk, download them under 'releases/crate/'.
@@ -191,7 +201,7 @@ def retrieve(crate, version : str) -> None:
         return
 
 
-def find_pairs(context : 'LasvContext', crate : str) -> int:
+def find_pairs(context: "LasvContext", crate: str, model: str = None) -> int:
     """
     Find all pairs of consecutive releases for a given crate.
     For each pair, retrieve its sources using retrieve().
@@ -201,15 +211,15 @@ def find_pairs(context : 'LasvContext', crate : str) -> int:
     found_count = 0
 
     # First, retrieve last version from context
-    crate_info = context.data['crates'].get(crate, {})
-    is_external = crate_info.get('external', False)
-    is_binary = crate_info.get('binary', False)
+    crate_info = context.data["crates"].get(crate, {})
+    is_external = crate_info.get("external", False)
+    is_binary = crate_info.get("binary", False)
     if is_external or is_binary:
         print("   Skipping: non-source crate.")
         return found_count
 
-    last_version = crate_info.get('last_version')
-    if last_version == '0.1.0':
+    last_version = crate_info.get("last_version")
+    if last_version == "0.1.0":
         print("   Skipping: only 0.1.0 release exists.")
         return found_count
 
@@ -225,23 +235,23 @@ def find_pairs(context : 'LasvContext', crate : str) -> int:
                 ["alr", "--format", "show", f"{crate}<{v2}"],
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
 
-            if 'external' in prev_result.stdout:
+            if "external" in prev_result.stdout:
                 print("   Skipping: external release.")
                 return found_count
-            if 'Not found' in prev_result.stdout:
+            if "Not found" in prev_result.stdout:
                 if found_count == 0:
                     print(f"   No release <{v2} found.")
                 return found_count
 
             prev_info = json.loads(prev_result.stdout)
 
-            v1 = prev_info.get('version')
+            v1 = prev_info.get("version")
             print(f"   Found pair: {v1} -> {v2}")
             found_count += 1
-            if not  first_retrieved:
+            if not first_retrieved:
                 retrieve(crate, v2)
                 first_retrieved = True
             retrieve(crate, v1)
@@ -249,16 +259,19 @@ def find_pairs(context : 'LasvContext', crate : str) -> int:
             # Perform the actual comparison of specs
             # Clear previous diagnosis for this crate
             context.clear_diagnosis(crate)
-            context.start_diagnosis(crate, v2, 'files')
+            context.start_diagnosis(crate, v2, "files")
 
-            compare_specs(context, crate, v1, v2)
+            compare_specs(context, crate, v1, v2, model)
 
             # Finish diagnosis for 'files' analyzer
-            context.finish_diagnosis(crate, v1, v2, 'files')
+            context.finish_diagnosis(crate, v1, v2, "files")
 
             v2 = v1
 
-        except (subprocess.CalledProcessError, FileNotFoundError,
-                json.JSONDecodeError) as e:
+        except (
+            subprocess.CalledProcessError,
+            FileNotFoundError,
+            json.JSONDecodeError,
+        ) as e:
             print(f"Error checking crate {crate}<{v2}: {e}")
             return found_count

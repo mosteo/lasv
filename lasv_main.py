@@ -16,6 +16,7 @@ Input arguments: optional crate name to process only that crate.
 
 import os
 import sys
+import argparse
 from enum import Enum
 
 import semver
@@ -199,18 +200,30 @@ def lasv_main():
     Load context if it exists. Obtain from it the 'crates' list.
     If a crate name is given as argument, process only that crate.
     """
+    parser = argparse.ArgumentParser(
+        description="Version compliance analysis using LLMs."
+    )
+    parser.add_argument(
+        "crate",
+        nargs="?",
+        help="Crate name to process (optional).",
+    )
+    parser.add_argument(
+        "--model",
+        help="LLM model to use for analysis (optional)."
+    )
+    args = parser.parse_args()
+
     context = LasvContext()
     context.load()
 
-    target_crate = sys.argv[1] if len(sys.argv) > 1 else None
-
-    if target_crate:
-        print(f"Processing only crate: {target_crate}")
+    if args.crate:
+        print(f"Processing only crate: {args.crate}")
     else:
         print("Processing all crates.")
         crates.list_crates(context)
 
-    crates.process(context, target_crate)
+    crates.process(context, args.crate, args.model)
 
 # Program entry point
 if __name__ == "__main__":

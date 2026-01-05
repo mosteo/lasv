@@ -77,7 +77,9 @@ def list_crates(context : 'LasvContext'):
     print(f"Found {len(crates_list)} source crates out of {len(crates_info)}.")
 
 
-def process(context : 'LasvContext', target_crate : str = None) -> None:
+def process(
+    context: "LasvContext", target_crate: str = None, model: str = None
+) -> None:
     """
     For each crate in context's 'crates' list (or only target_crate if given),
     find all pairs of consecutive releases and retrieve their sources.
@@ -93,6 +95,6 @@ def process(context : 'LasvContext', target_crate : str = None) -> None:
 
     for crate in crates_to_process:
         print(f"Processing crate: {crate}")
-        total_pairs += releases.find_pairs(context, crate)
+        total_pairs += releases.find_pairs(context, crate, model)
 
     print(f"Total release pairs: {total_pairs}")
