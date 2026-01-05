@@ -2171,41 +2171,7 @@ crates:
       0.1.1:
         diagnosis:
           files:
-            changes:
-            - col: 0
-              description: 'New spec file added: rx-op-hold.ads'
-              line: 0
-              severity: minor
-            - col: 0
-              description: 'New spec file added: rx-devel.ads'
-              line: 0
-              severity: minor
-            - col: 0
-              description: 'New spec file added: rx-jsa2019.ads'
-              line: 0
-              severity: minor
-            - col: 0
-              description: 'New spec file added: rx-op-do_on.ads'
-              line: 0
-              severity: minor
-            - col: 0
-              description: 'New spec file added: rx-op-funnel.ads'
-              line: 0
-              severity: minor
-            - col: 0
-              description: 'New spec file added: rx-subjects.ads'
-              line: 0
-              severity: minor
-            - col: 0
-              description: 'Spec file removed: rx-impl-multiobservers.ads'
-              line: 0
-              severity: MAJOR
-            - col: 0
-              description: 'New spec file added: rx-op-stopwatch.ads'
-              line: 0
-              severity: minor
-            compliant: false
-            noncompliance: Minor version bump but MAJOR changes found.
+            changes: []
   saatana:
     binary: false
     external: false

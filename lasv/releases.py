@@ -2,7 +2,7 @@ import json
 import os
 import shutil
 import subprocess
-from lasv_main import LasvContext
+from lasv_main import LasvContext, ChangeType
 from typing import Optional
 
 
@@ -70,10 +70,11 @@ def compare_specs(context: 'LasvContext', crate: str, v1: str, v2: str) -> None:
     for spec in all_specs:
         p1 = specs_v1.get(spec)
         p2 = specs_v2.get(spec)
-        compare_spec_files(context, p1, p2)
+        compare_spec_files(context, crate, v2, p1, p2)
 
 
-def compare_spec_files(context: 'LasvContext', path1: Optional[str], path2: Optional[str]) -> None:
+def compare_spec_files(context: 'LasvContext', crate: str, version: str,
+                       path1: Optional[str], path2: Optional[str]) -> None:
     """
     Compare two paths to the same *.ads file.
 
@@ -82,12 +83,14 @@ def compare_spec_files(context: 'LasvContext', path1: Optional[str], path2: Opti
     """
     if path1 is None:
         # File added in v2. Minor change (backward compatible addition).
-        print(f"minor (0, 0): New spec file added: {os.path.basename(path2)}")
+        context.emit_change(crate, version, 'files', ChangeType.MINOR, 0, 0,
+                            f"New spec file added: {os.path.basename(path2)}")
         return
 
     if path2 is None:
         # File removed in v2. Major change (backward incompatible removal).
-        print(f"MAJOR (0, 0): Spec file removed: {os.path.basename(path1)}")
+        context.emit_change(crate, version, 'files', ChangeType.MAJOR, 0, 0,
+                            f"Spec file removed: {os.path.basename(path1)}")
         return
 
     # Both exist, so we will compare their content later
@@ -181,7 +184,14 @@ def find_pairs(context : 'LasvContext', crate : str) -> int:
             retrieve(crate, v1)
 
             # Perform the actual comparison of specs
+            # Clear previous diagnosis for this crate
+            context.clear_diagnosis(crate)
+            context.start_diagnosis(crate, v2, 'files')
+
             compare_specs(context, crate, v1, v2)
+
+            # Finish diagnosis for 'files' analyzer
+            context.finish_diagnosis(crate, v1, v2, 'files')
 
             v2 = v1
 
