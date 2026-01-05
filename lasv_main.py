@@ -15,19 +15,23 @@ Input arguments: optional crate name to process only that crate.
 
 
 import os
-import semver
 import sys
-import yaml
 from enum import Enum
+
+import semver
+import yaml
+
 from lasv import crates
 
 
 class ChangeType(Enum):
+    """Enumeration for the type of change."""
     MAJOR = "MAJOR"
     MINOR = "minor"
 
 
 class Compliance(Enum):
+    """Enumeration for compliance status."""
     STRICT = "strict"
     LAX = "lax"
     NO = "no"
@@ -147,7 +151,7 @@ class LasvContext:
                 if analyzer != 'files':
                     compliance = Compliance.LAX
                     reason = "Major version bump but no MAJOR changes found."
-        elif is_minor_bump:
+        if is_minor_bump:
             if major_changes:
                 compliance = Compliance.NO
                 reason = "Minor version bump but MAJOR changes found."
@@ -196,7 +200,7 @@ def lasv_main():
     If a crate name is given as argument, process only that crate.
     """
     context = LasvContext()
-    data = context.load()
+    context.load()
 
     target_crate = sys.argv[1] if len(sys.argv) > 1 else None
 
@@ -204,7 +208,7 @@ def lasv_main():
         print(f"Processing only crate: {target_crate}")
     else:
         print("Processing all crates.")
-        crates.list(context)
+        crates.list_crates(context)
 
     crates.process(context, target_crate)
 
