@@ -1,7 +1,11 @@
+import subprocess
+import json
+from tqdm import tqdm
 from lasv_main import LasvContext
+from lasv import releases
 
 
-def list(context : 'LasvContext'):
+def list_crates(context : 'LasvContext'):
     """
     Do nothing if context already contains a non-empty 'crates' list.
     Else list crates using `alr`, filter out binary crates, and store the
@@ -11,10 +15,6 @@ def list(context : 'LasvContext'):
     if 'crates' in context.data and context.data['crates']:
         print("Crates already listed in context.")
         return
-
-    import subprocess
-    import json
-    from tqdm import tqdm
 
     try:
         result = subprocess.run(
@@ -26,7 +26,7 @@ def list(context : 'LasvContext'):
         crates_info = json.loads(result.stdout)
         print(f"Listed {len(crates_info)} crates using alr.")
 
-    except Exception as e:
+    except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
         print(f"Error listing crates: {e}")
         context.data['crates'] = []
         return
@@ -59,7 +59,7 @@ def list(context : 'LasvContext'):
             # Add the 'version' field under the crate name, as 'last_version'
             crate_entry['last_version'] = show_info.get('version')
 
-        except Exception as e:
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
             if 'external' in show_result.stdout:
                 is_external = True
             else:
@@ -90,7 +90,6 @@ def process(context : 'LasvContext', target_crate : str = None) -> None:
 
     for crate in crates_to_process:
         print(f"Processing crate: {crate}")
-        from lasv import releases
         total_pairs += releases.find_pairs(context, crate)
 
     print(f"Total release pairs: {total_pairs}")
