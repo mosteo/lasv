@@ -1,4 +1,4 @@
 pyyaml
+requests
 semver
 tqdm
-requests
