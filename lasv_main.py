@@ -17,6 +17,7 @@ Input arguments: optional crate name to process only that crate.
 import os
 import sys
 import argparse
+from dataclasses import dataclass
 from enum import Enum
 
 import semver
@@ -36,6 +37,15 @@ class Compliance(Enum):
     STRICT = "strict"
     LAX = "lax"
     NO = "no"
+
+
+@dataclass
+class ChangeInfo:
+    """Information about a detected change."""
+    severity: ChangeType
+    line: int
+    col: int
+    description: str
 
 
 class LasvContext:
@@ -85,32 +95,25 @@ class LasvContext:
         rel_data['diagnosis'][analyzer] = {'changes': []}
         self.save()
 
-    def emit_change(self, crate: str, version: str, analyzer: str,
-                   severity: ChangeType, line: int, col: int, description: str):
+    def emit_change(self, crate: str, version: str, analyzer: str, change: ChangeInfo):
         """
         Record a detected change.
-        severity: ChangeType.MAJOR or ChangeType.MINOR
-        line, col: location in the new file
-        description: explanation of the change
         """
-        print(f"{severity.value} ({line}, {col}): {description}")
+        print(f"{change.severity.value} ({change.line}, {change.col}): {change.description}")
 
         # Ensure all required parent keys exist before storing anything new.
         # Up to release must already exist as it was created during fetching.
         if 'diagnosis' not in self.data['crates'][crate]['releases'][version]:
             self.data['crates'][crate]['releases'][version]['diagnosis'] = {}
-        if analyzer not in self.data['crates'][crate]['releases'] \
-                                    [version]['diagnosis']:
-            self.data['crates'][crate]['releases'][version] \
-                     ['diagnosis'][analyzer] = {'changes': []}
+        if analyzer not in self.data['crates'][crate]['releases'][version]['diagnosis']:
+            self.data['crates'][crate]['releases'][version]['diagnosis'][analyzer] = {'changes': []}
 
-        changes = self.data['crates'][crate]['releases'][version] \
-                           ['diagnosis'][analyzer]['changes']
+        changes = self.data['crates'][crate]['releases'][version]['diagnosis'][analyzer]['changes']
         changes.append({
-            'severity': severity.value,
-            'line': line,
-            'col': col,
-            'description': description
+            'severity': change.severity.value,
+            'line': change.line,
+            'col': change.col,
+            'description': change.description
         })
 
     def finish_diagnosis(self, crate: str, prev_version: str,
@@ -122,52 +125,18 @@ class LasvContext:
             v1 = semver.Version.parse(prev_version)
             v2 = semver.Version.parse(curr_version)
         except ValueError:
-            # Fallback for non-semver versions? Or raise?
-            # For now assume compliance cannot be determined if not semver.
             print(f"Non-semver version found: {prev_version} -> {curr_version}")
             raise
 
-        diag = self.data['crates'][crate]['releases'][curr_version] \
-                        ['diagnosis'][analyzer]
-        changes = diag['changes']
+        diag = self.data['crates'][crate]['releases'][curr_version]['diagnosis'][analyzer]
+        major_changes = [c for c in diag['changes'] if c['severity'] == "MAJOR"]
+        minor_changes = [c for c in diag['changes'] if c['severity'] == "minor"]
 
-        major_changes = [c for c in changes if c['severity'] == "MAJOR"]
-        minor_changes = [c for c in changes if c['severity'] == "minor"]
-
-        is_major_bump = v2.major > v1.major
-        is_minor_bump = v2.minor > v1.minor and v2.major == v1.major
-        is_patch_bump = v2.patch > v1.patch and v2.major == v1.major \
-                        and v2.minor == v1.minor
-
-        if v1.major == 0:
-            # 0.x.y semantic versioning:
-            # - minor bump acts as MAJOR bump (breaking changes)
-            # - patch bump acts as minor bump (backwards compatible additions)
-            # - there is no patch level equivalent (all changes are either min or maj)
-            is_major_bump = is_minor_bump or is_major_bump # 0.1 -> 0.2 is MAJOR
-            is_minor_bump = is_patch_bump # 0.1.1 -> 0.1.2 is minor
-            is_patch_bump = False # No patch level in 0.x
-
-        compliance = Compliance.STRICT
-        reason = ""
-
-        if is_major_bump:
-            if not major_changes:
-                if analyzer != 'files':
-                    compliance = Compliance.LAX
-                    reason = "Major version bump but no MAJOR changes found."
-        if is_minor_bump:
-            if major_changes:
-                compliance = Compliance.NO
-                reason = "Minor version bump but MAJOR changes found."
-            elif not minor_changes:
-                if analyzer != 'files':
-                    compliance = Compliance.LAX
-                    reason = "Minor version bump but no minor changes found."
-        elif is_patch_bump:
-            if major_changes or minor_changes:
-                compliance = Compliance.NO
-                reason = "Patch version bump but API changes found."
+        is_major_bump, is_minor_bump, is_patch_bump = _detect_version_bump(v1, v2)
+        compliance, reason = _calculate_compliance(
+            is_major_bump, is_minor_bump, is_patch_bump,
+            major_changes, minor_changes, analyzer
+        )
 
         diag['compliant'] = compliance.value
         if compliance == Compliance.NO:
@@ -197,6 +166,54 @@ class LasvContext:
             if os.path.exists(old_filename):
                 os.rename(old_filename, self.filename)  # Restore the old file
             raise e
+
+
+def _detect_version_bump(v1: semver.Version, v2: semver.Version) -> tuple[bool, bool, bool]:
+    """
+    Detect the type of version bump between two versions.
+    Returns (is_major_bump, is_minor_bump, is_patch_bump).
+    """
+    is_major_bump = v2.major > v1.major
+    is_minor_bump = v2.minor > v1.minor and v2.major == v1.major
+    is_patch_bump = v2.patch > v1.patch and v2.major == v1.major and v2.minor == v1.minor
+
+    if v1.major == 0:
+        # 0.x.y semantic versioning:
+        # - minor bump acts as MAJOR bump (breaking changes)
+        # - patch bump acts as minor bump (backwards compatible additions)
+        is_major_bump = is_minor_bump or is_major_bump  # 0.1 -> 0.2 is MAJOR
+        is_minor_bump = is_patch_bump  # 0.1.1 -> 0.1.2 is minor
+        is_patch_bump = False  # No patch level in 0.x
+
+    return is_major_bump, is_minor_bump, is_patch_bump
+
+
+def _calculate_compliance(
+    is_major_bump: bool, is_minor_bump: bool, is_patch_bump: bool,
+    major_changes: list, minor_changes: list, analyzer: str
+) -> tuple[Compliance, str]:
+    """
+    Calculate compliance status based on version bump type and detected changes.
+    Returns (compliance, reason).
+    """
+    compliance = Compliance.STRICT
+    reason = ""
+
+    if is_major_bump and not major_changes and analyzer != 'files':
+        compliance = Compliance.LAX
+        reason = "Major version bump but no MAJOR changes found."
+    elif is_minor_bump:
+        if major_changes:
+            compliance = Compliance.NO
+            reason = "Minor version bump but MAJOR changes found."
+        elif not minor_changes and analyzer != 'files':
+            compliance = Compliance.LAX
+            reason = "Minor version bump but no minor changes found."
+    elif is_patch_bump and (major_changes or minor_changes):
+        compliance = Compliance.NO
+        reason = "Patch version bump but API changes found."
+
+    return compliance, reason
 
 
 def lasv_main():

@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from typing import Optional
 
-from lasv_main import LasvContext, ChangeType
+from lasv_main import LasvContext, ChangeType, ChangeInfo
 from lasv import specs as specs_module
 
 
@@ -135,8 +135,9 @@ def compare_spec_files(
             # Private packages are not part of public API
             return
         # File added in v2. Minor change (backward compatible addition).
-        context.emit_change(crate, version, 'files', ChangeType.MINOR, 0, 0,
-                            f"Public spec file added: {os.path.basename(path2)}")
+        context.emit_change(crate, version, 'files',
+                            ChangeInfo(ChangeType.MINOR, 0, 0,
+                                       f"Public spec file added: {os.path.basename(path2)}"))
         return
 
     if path2 is None:
@@ -145,28 +146,29 @@ def compare_spec_files(
             # Private packages are not part of public API
             return
         # File removed in v2. Major change (backward incompatible removal).
-        context.emit_change(crate, version, 'files', ChangeType.MAJOR, 0, 0,
-                            f"Public spec file removed: {os.path.basename(path1)}")
+        context.emit_change(crate, version, 'files',
+                            ChangeInfo(ChangeType.MAJOR, 0, 0,
+                                       f"Public spec file removed: {os.path.basename(path1)}"))
         return
 
-    # if file exists in both, but is private only in one case, this affects
-    # the public API.
-    if is_private_package(path1) != is_private_package(path2):
-        if is_private_package(path1):
-            # Private packages are not part of public API, so this is a minor change.
-            context.emit_change(crate, version, 'files', ChangeType.MINOR, 0, 0,
-                                f"Public spec file added: {os.path.basename(path2)}")
-            return
-        # File removed in v2. Major change (backward incompatible removal).
-        context.emit_change(crate, version, 'files', ChangeType.MAJOR, 0, 0,
-                            f"Public spec file removed: {os.path.basename(path1)}")
-        return
+    # Both files exist - check privacy status
+    is_private_1 = is_private_package(path1)
+    is_private_2 = is_private_package(path2)
 
     # If both exist and private, no change.
-    if is_private_package(path1) and is_private_package(path2):
+    if is_private_1 and is_private_2:
         return
 
-    # Both exist, so we will compare their content later.
+    # if file exists in both, but is private only in one case, this affects the public API.
+    if is_private_1 != is_private_2:
+        change_type = ChangeType.MINOR if is_private_1 else ChangeType.MAJOR
+        action = "added" if is_private_1 else "removed"
+        context.emit_change(crate, version, 'files',
+                            ChangeInfo(change_type, 0, 0,
+                                       f"Public spec file {action}: {os.path.basename(path2)}"))
+        return
+
+    # Both exist and are public, so we will compare their content.
     specs_module.compare_spec_content(context, crate, version, path1, path2, model)
 
 
