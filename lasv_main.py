@@ -27,6 +27,12 @@ class ChangeType(Enum):
     MINOR = "minor"
 
 
+class Compliance(Enum):
+    STRICT = "strict"
+    LAX = "lax"
+    NO = "no"
+
+
 class LasvContext:
     """Encapsulates lasv context data with load/save functionality."""
 
@@ -133,37 +139,38 @@ class LasvContext:
             is_minor_bump = is_patch_bump # 0.1.1 -> 0.1.2 is minor
             is_patch_bump = False # No patch level in 0.x
 
-        compliant = True
+        compliance = Compliance.STRICT
         reason = ""
 
         if is_major_bump:
             if not major_changes:
-                # 'files' analyzer might not see file changes, but content changes could exist.
-                # So for 'files', absence of changes is not a failure for major bump.
                 if analyzer != 'files':
-                    compliant = False
+                    compliance = Compliance.LAX
                     reason = "Major version bump but no MAJOR changes found."
         elif is_minor_bump:
             if major_changes:
-                compliant = False
+                compliance = Compliance.NO
                 reason = "Minor version bump but MAJOR changes found."
             elif not minor_changes:
-                # Same logic as above: 'files' analyzer might not see additions.
                 if analyzer != 'files':
-                    compliant = False
+                    compliance = Compliance.LAX
                     reason = "Minor version bump but no minor changes found."
         elif is_patch_bump:
-             # Should not happen for 0.x based on above remapping
             if major_changes or minor_changes:
-                compliant = False
+                compliance = Compliance.NO
                 reason = "Patch version bump but API changes found."
 
-        diag['compliant'] = compliant
-        if not compliant:
+        diag['compliant'] = compliance.value
+        if compliance == Compliance.NO:
             diag['noncompliance'] = reason
             print(f"      [{analyzer}: NON-COMPLIANT] {reason}")
-        else:
-            print(f"      [{analyzer}: COMPLIANT]")
+        elif compliance == Compliance.LAX:
+            diag['noncompliance'] = reason
+            print(f"      [{analyzer}: COMPLIANT (lax)] {reason}")
+        else:  # strict
+            if 'noncompliance' in diag:
+                del diag['noncompliance']
+            print(f"      [{analyzer}: COMPLIANT (strict)]")
 
         self.save()
 
