@@ -62,7 +62,7 @@ class LasvContext:
     def __init__(self, filename="lasv.yaml"):
         self.filename = filename
         self.data = {}
-        self.model: str | None = None
+        self.model = None
 
     def load(self):
         """Load context from YAML file."""
