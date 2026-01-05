@@ -209,6 +209,16 @@ def find_pairs(context: "LasvContext", crate: str) -> int:
     Returns the count of pairs found.
     """
 
+    def fix_version(v: str) -> str:
+        # if a version doesn't contain dots, we add '.0.0' to circumvent alr issues
+        if '.' not in v:
+            return f"{v}.0.0"
+        # If version has only one dot, add '.0'
+        if v.count('.') == 1:
+            return f"{v}.0"
+        return v
+
+
     found_count = 0
 
     # First, retrieve last version from context
@@ -219,7 +229,7 @@ def find_pairs(context: "LasvContext", crate: str) -> int:
         print("   Skipping: non-source crate.")
         return found_count
 
-    last_version = crate_info.get("last_version")
+    last_version = fix_version(crate_info.get("last_version"))
     if last_version == "0.1.0":
         print("   Skipping: only 0.1.0 release exists.")
         return found_count
@@ -247,9 +257,14 @@ def find_pairs(context: "LasvContext", crate: str) -> int:
                     print(f"   No release <{v2} found.")
                 return found_count
 
+            if prev_result.stdout.strip() == "":
+                if found_count == 0:
+                    print(f"   No release <{v2} found.")
+                return found_count
+
             prev_info = json.loads(prev_result.stdout)
 
-            v1 = prev_info.get("version")
+            v1 = fix_version(prev_info.get("version"))
             print(f"   Found pair: {v1} -> {v2}")
             found_count += 1
             if not first_retrieved:
@@ -258,14 +273,20 @@ def find_pairs(context: "LasvContext", crate: str) -> int:
             retrieve(crate, v1)
 
             # Perform the actual comparison of specs
-            # Clear previous diagnosis for this crate
-            context.clear_diagnosis(crate)
-            context.start_diagnosis(crate, v2, "files")
+            # Check if 'files' diagnosis already exists for this version
+            files_diagnosis_exists = (
+                'releases' in context.data['crates'][crate] and
+                v2 in context.data['crates'][crate]['releases'] and
+                'diagnosis' in context.data['crates'][crate]['releases'][v2] and
+                'files' in context.data['crates'][crate]['releases'][v2]['diagnosis']
+            )
 
-            compare_specs(context, crate, v1, v2)
-
-            # Finish diagnosis for 'files' analyzer
-            context.finish_diagnosis(crate, v1, v2, "files")
+            if not files_diagnosis_exists:
+                context.start_diagnosis(crate, v2, "files")
+                compare_specs(context, crate, v1, v2)
+                context.finish_diagnosis(crate, v1, v2, "files")
+            else:
+                print(f"      Skipping 'files' diagnosis (already exists)")
 
             v2 = v1
 

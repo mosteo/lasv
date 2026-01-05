@@ -275,6 +275,7 @@ def lasv_main():
         crates.list_crates(context)
 
     crates.process(context, args.crate)
+    context.save()
 
 # Program entry point
 if __name__ == "__main__":

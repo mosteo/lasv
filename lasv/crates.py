@@ -20,6 +20,11 @@ def list_crate(context: 'LasvContext', crate_name: str) -> None:
     is_binary = False
     crate_entry = {}
 
+    # If the crate is already listed, skip it
+    if 'crates' in context.data and crate_name in context.data['crates']:
+        print(f"Crate {crate_name} already listed in context.")
+        return
+
     try:
         show_result = subprocess.run(
             ["alr", "--format", "show", crate_name],
@@ -39,7 +44,7 @@ def list_crate(context: 'LasvContext', crate_name: str) -> None:
         crate_entry['last_version'] = show_info.get('version')
 
     except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
-        if 'external' in show_result.stdout:
+        if show_result.stdout == '' or 'external' in show_result.stdout:
             is_external = True
         else:
             print(f"Error checking crate {crate_name}: {e}")
