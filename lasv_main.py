@@ -39,6 +39,14 @@ class Compliance(Enum):
     NO = "no"
 
 
+class BumpType(Enum):
+    """Enumeration for version bump types."""
+    MAJOR = "major"
+    MINOR = "minor"
+    PATCH = "patch"
+    NONE = "none"
+
+
 @dataclass
 class ChangeInfo:
     """Information about a detected change."""
@@ -132,10 +140,9 @@ class LasvContext:
         major_changes = [c for c in diag['changes'] if c['severity'] == "MAJOR"]
         minor_changes = [c for c in diag['changes'] if c['severity'] == "minor"]
 
-        is_major_bump, is_minor_bump, is_patch_bump = _detect_version_bump(v1, v2)
+        bump_type = _detect_version_bump(v1, v2)
         compliance, reason = _calculate_compliance(
-            is_major_bump, is_minor_bump, is_patch_bump,
-            major_changes, minor_changes, analyzer
+            bump_type, major_changes, minor_changes, analyzer
         )
 
         diag['compliant'] = compliance.value
@@ -168,10 +175,10 @@ class LasvContext:
             raise e
 
 
-def _detect_version_bump(v1: semver.Version, v2: semver.Version) -> tuple[bool, bool, bool]:
+def _detect_version_bump(v1: semver.Version, v2: semver.Version) -> BumpType:
     """
     Detect the type of version bump between two versions.
-    Returns (is_major_bump, is_minor_bump, is_patch_bump).
+    Returns a BumpType enum value.
     """
     is_major_bump = v2.major > v1.major
     is_minor_bump = v2.minor > v1.minor and v2.major == v1.major
@@ -181,16 +188,26 @@ def _detect_version_bump(v1: semver.Version, v2: semver.Version) -> tuple[bool, 
         # 0.x.y semantic versioning:
         # - minor bump acts as MAJOR bump (breaking changes)
         # - patch bump acts as minor bump (backwards compatible additions)
-        is_major_bump = is_minor_bump or is_major_bump  # 0.1 -> 0.2 is MAJOR
-        is_minor_bump = is_patch_bump  # 0.1.1 -> 0.1.2 is minor
-        is_patch_bump = False  # No patch level in 0.x
+        if is_minor_bump or is_major_bump:
+            return BumpType.MAJOR
+        if is_patch_bump:
+            return BumpType.MINOR
+        return BumpType.NONE
 
-    return is_major_bump, is_minor_bump, is_patch_bump
+    if is_major_bump:
+        return BumpType.MAJOR
+    if is_minor_bump:
+        return BumpType.MINOR
+    if is_patch_bump:
+        return BumpType.PATCH
+    return BumpType.NONE
 
 
 def _calculate_compliance(
-    is_major_bump: bool, is_minor_bump: bool, is_patch_bump: bool,
-    major_changes: list, minor_changes: list, analyzer: str
+    bump_type: BumpType,
+    major_changes: list,
+    minor_changes: list,
+    analyzer: str
 ) -> tuple[Compliance, str]:
     """
     Calculate compliance status based on version bump type and detected changes.
@@ -199,19 +216,21 @@ def _calculate_compliance(
     compliance = Compliance.STRICT
     reason = ""
 
-    if is_major_bump and not major_changes and analyzer != 'files':
-        compliance = Compliance.LAX
-        reason = "Major version bump but no MAJOR changes found."
-    elif is_minor_bump:
+    if bump_type == BumpType.MAJOR:
+        if not major_changes and analyzer != 'files':
+            compliance = Compliance.LAX
+            reason = "Major version bump but no MAJOR changes found."
+    elif bump_type == BumpType.MINOR:
         if major_changes:
             compliance = Compliance.NO
             reason = "Minor version bump but MAJOR changes found."
         elif not minor_changes and analyzer != 'files':
             compliance = Compliance.LAX
             reason = "Minor version bump but no minor changes found."
-    elif is_patch_bump and (major_changes or minor_changes):
-        compliance = Compliance.NO
-        reason = "Patch version bump but API changes found."
+    elif bump_type == BumpType.PATCH:
+        if major_changes or minor_changes:
+            compliance = Compliance.NO
+            reason = "Patch version bump but API changes found."
 
     return compliance, reason
 
