@@ -34,7 +34,8 @@ def query_model(model: str, spec1_content: str, spec2_content: str) -> str:
                     {"role": "system", "content": prompt},
                     {"role": "user", "content": user_content}
                 ]
-            })
+            }),
+            timeout=30
         )
 
         response.raise_for_status()
@@ -42,9 +43,9 @@ def query_model(model: str, spec1_content: str, spec2_content: str) -> str:
         result = response.json()
         if "choices" in result and result["choices"]:
             return result["choices"][0]["message"]["content"]
-        else:
-            print(f"Error: Unexpected response from OpenRouter API: {result}")
-            sys.exit(1)
+
+        print(f"Error: Unexpected response from OpenRouter API: {result}")
+        sys.exit(1)
 
     except requests.exceptions.RequestException as e:
         print(f"Error connecting to OpenRouter API: {e}")

@@ -23,7 +23,9 @@ def _get_public_spec(path: str) -> str:
 
     if private_line_index != -1:
         # Find the column index of "private" in the uncommented line
-        private_match_in_uncommented = re.search(r"\bprivate\b", uncommented_lines[private_line_index], re.IGNORECASE)
+        private_match_in_uncommented = re.search(
+            r"\bprivate\b", uncommented_lines[private_line_index], re.IGNORECASE
+        )
         col_index = private_match_in_uncommented.start()
 
         # Reconstruct the content up to the "private" keyword

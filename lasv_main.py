@@ -15,7 +15,6 @@ Input arguments: optional crate name to process only that crate.
 
 
 import os
-import sys
 import argparse
 from enum import Enum
 
