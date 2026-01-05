@@ -37,10 +37,8 @@ def list(context : 'LasvContext'):
     # is binary if its 'origin' contains a 'case(*)' key.
     for crate in tqdm(crates_info, desc="Identifying binary crates"):
         crate_name = crate.get('name')
-        is_external = False
-        is_binary = False
-        crate_entry = {}
         try:
+            crate_entry = {}
 
             show_result = subprocess.run(
                 ["alr", "--format", "show", crate_name],
@@ -50,6 +48,8 @@ def list(context : 'LasvContext'):
             )
             show_info = json.loads(show_result.stdout)
 
+            is_external = False
+            is_binary = False
             origins = show_info.get('origin', [])
             for origin in origins:
                 if 'case(' in origin:
