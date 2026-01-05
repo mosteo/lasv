@@ -1,3 +1,6 @@
+"""
+This module handles the listing and processing of Alire crates.
+"""
 import subprocess
 import json
 from tqdm import tqdm
