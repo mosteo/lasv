@@ -476,7 +476,7 @@ crates:
         diagnosis:
           files:
             changes: []
-            compliant: true
+            compliant: strict
       0.1.3: {}
   blink_led_arduino_due:
     binary: false
@@ -2219,7 +2219,7 @@ crates:
               description: 'Public spec file added: rx-op-do_on.ads'
               line: 0
               severity: minor
-            compliant: false
+            compliant: 'no'
             noncompliance: Minor version bump but MAJOR changes found.
   saatana:
     binary: false
