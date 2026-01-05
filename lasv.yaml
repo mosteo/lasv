@@ -471,6 +471,13 @@ crates:
     binary: false
     external: false
     last_version: 0.1.3
+    releases:
+      0.1.1:
+        diagnosis:
+          files:
+            changes: []
+            compliant: true
+      0.1.3: {}
   blink_led_arduino_due:
     binary: false
     external: false
@@ -2173,35 +2180,43 @@ crates:
           files:
             changes:
             - col: 0
-              description: 'New spec file added: rx-op-hold.ads'
+              description: 'Public spec file added: rx-op-stopwatch.ads'
               line: 0
               severity: minor
             - col: 0
-              description: 'New spec file added: rx-devel.ads'
-              line: 0
-              severity: minor
-            - col: 0
-              description: 'New spec file added: rx-jsa2019.ads'
-              line: 0
-              severity: minor
-            - col: 0
-              description: 'New spec file added: rx-op-do_on.ads'
-              line: 0
-              severity: minor
-            - col: 0
-              description: 'New spec file added: rx-op-funnel.ads'
-              line: 0
-              severity: minor
-            - col: 0
-              description: 'New spec file added: rx-subjects.ads'
-              line: 0
-              severity: minor
-            - col: 0
-              description: 'Spec file removed: rx-impl-multiobservers.ads'
+              description: 'Public spec file removed: rx-op-merge.ads'
               line: 0
               severity: MAJOR
             - col: 0
-              description: 'New spec file added: rx-op-stopwatch.ads'
+              description: 'Public spec file added: rx-subjects.ads'
+              line: 0
+              severity: minor
+            - col: 0
+              description: 'Public spec file added: rx-op-funnel.ads'
+              line: 0
+              severity: minor
+            - col: 0
+              description: 'Public spec file removed: rx-impl-shared_observer.ads'
+              line: 0
+              severity: MAJOR
+            - col: 0
+              description: 'Public spec file added: rx-devel.ads'
+              line: 0
+              severity: minor
+            - col: 0
+              description: 'Public spec file added: rx-subscribe.ads'
+              line: 0
+              severity: minor
+            - col: 0
+              description: 'Public spec file added: rx-op-hold.ads'
+              line: 0
+              severity: minor
+            - col: 0
+              description: 'Public spec file added: rx-jsa2019.ads'
+              line: 0
+              severity: minor
+            - col: 0
+              description: 'Public spec file added: rx-op-do_on.ads'
               line: 0
               severity: minor
             compliant: false

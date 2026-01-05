@@ -138,24 +138,20 @@ class LasvContext:
 
         if is_major_bump:
             if not major_changes:
-                compliant = False
-                reason = "Major version bump but no MAJOR changes found."
+                # 'files' analyzer might not see file changes, but content changes could exist.
+                # So for 'files', absence of changes is not a failure for major bump.
+                if analyzer != 'files':
+                    compliant = False
+                    reason = "Major version bump but no MAJOR changes found."
         elif is_minor_bump:
             if major_changes:
                 compliant = False
                 reason = "Minor version bump but MAJOR changes found."
             elif not minor_changes:
-                # This is debatable, but user said:
-                # "E.g., finding only minor changes in a major bump will be declared non-compliant."
-                # Does minor bump require minor changes? Usually yes, otherwise it's a patch.
-                # Assuming yes for strict compliance.
-                compliant = (v1.major == 0) # For 0.x, minor/patch bumps are looser?
-                # Actually, user logic implies we expect changes matching the bump.
-                # If it's a minor bump (0.x patch), we expect minor changes.
-                # If we have 0 changes, it's non-compliant?
-                # Let's stick to the previous logic but with remapped bumps.
-                compliant = False
-                reason = "Minor version bump but no minor changes found."
+                # Same logic as above: 'files' analyzer might not see additions.
+                if analyzer != 'files':
+                    compliant = False
+                    reason = "Minor version bump but no minor changes found."
         elif is_patch_bump:
              # Should not happen for 0.x based on above remapping
             if major_changes or minor_changes:

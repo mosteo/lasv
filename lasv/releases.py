@@ -42,6 +42,41 @@ def get_specs(release_path: str) -> dict[str, str]:
     return specs
 
 
+def is_private_package(spec_path: str) -> bool:
+    """
+    Check if a spec file declares a private package.
+    Returns True if 'private' keyword appears before 'package' keyword.
+    Handles multi-line declarations and generic packages.
+    """
+    try:
+        with open(spec_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # Remove comments (-- to end of line)
+        lines = content.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            comment_pos = line.find('--')
+            if comment_pos >= 0:
+                line = line[:comment_pos]
+            cleaned_lines.append(line)
+
+        cleaned_content = ' '.join(cleaned_lines).lower()
+
+        # Find positions of 'private' and 'package' keywords
+        # Use word boundaries to avoid matching substrings
+        import re
+        private_match = re.search(r'\bprivate\b', cleaned_content)
+        package_match = re.search(r'\bpackage\b', cleaned_content)
+
+        if private_match and package_match:
+            return private_match.start() < package_match.start()
+
+        return False
+    except Exception:
+        return False
+
+
 def compare_specs(context: 'LasvContext', crate: str, v1: str, v2: str) -> None:
     """
     Compare public specifications (*.ads files) between two releases to identify
@@ -82,18 +117,43 @@ def compare_spec_files(context: 'LasvContext', crate: str, version: str,
     If not None, compares the content of the specs.
     """
     if path1 is None:
+        # File added in v2. Check if it's a private package first.
+        if is_private_package(path2):
+            # Private packages are not part of public API
+            return
         # File added in v2. Minor change (backward compatible addition).
         context.emit_change(crate, version, 'files', ChangeType.MINOR, 0, 0,
-                            f"New spec file added: {os.path.basename(path2)}")
+                            f"Public spec file added: {os.path.basename(path2)}")
         return
 
     if path2 is None:
+        # File removed in v2. Check if it was a private package.
+        if is_private_package(path1):
+            # Private packages are not part of public API
+            return
         # File removed in v2. Major change (backward incompatible removal).
         context.emit_change(crate, version, 'files', ChangeType.MAJOR, 0, 0,
-                            f"Spec file removed: {os.path.basename(path1)}")
+                            f"Public spec file removed: {os.path.basename(path1)}")
         return
 
-    # Both exist, so we will compare their content later
+    # if file exists in both, but is private only in one case, this affects
+    # the public API.
+    if is_private_package(path1) != is_private_package(path2):
+        if is_private_package(path1):
+            # Private packages are not part of public API, so this is a minor change.
+            context.emit_change(crate, version, 'files', ChangeType.MINOR, 0, 0,
+                                f"Public spec file added: {os.path.basename(path2)}")
+            return
+        # File removed in v2. Major change (backward incompatible removal).
+        context.emit_change(crate, version, 'files', ChangeType.MAJOR, 0, 0,
+                            f"Public spec file removed: {os.path.basename(path1)}")
+        return
+
+    # If both exist and private, no change.
+    if is_private_package(path1) and is_private_package(path2):
+        return
+
+    # Both exist, so we will compare their content later.
     pass
 
 
