@@ -62,6 +62,7 @@ class LasvContext:
     def __init__(self, filename="lasv.yaml"):
         self.filename = filename
         self.data = {}
+        self.model: str | None = None
 
     def load(self):
         """Load context from YAML file."""
@@ -184,23 +185,25 @@ def _detect_version_bump(v1: semver.Version, v2: semver.Version) -> BumpType:
     is_minor_bump = v2.minor > v1.minor and v2.major == v1.major
     is_patch_bump = v2.patch > v1.patch and v2.major == v1.major and v2.minor == v1.minor
 
+    result = BumpType.NONE
+
     if v1.major == 0:
         # 0.x.y semantic versioning:
         # - minor bump acts as MAJOR bump (breaking changes)
         # - patch bump acts as minor bump (backwards compatible additions)
         if is_minor_bump or is_major_bump:
-            return BumpType.MAJOR
-        if is_patch_bump:
-            return BumpType.MINOR
-        return BumpType.NONE
+            result = BumpType.MAJOR
+        elif is_patch_bump:
+            result = BumpType.MINOR
+    else:
+        if is_major_bump:
+            result = BumpType.MAJOR
+        elif is_minor_bump:
+            result = BumpType.MINOR
+        elif is_patch_bump:
+            result = BumpType.PATCH
 
-    if is_major_bump:
-        return BumpType.MAJOR
-    if is_minor_bump:
-        return BumpType.MINOR
-    if is_patch_bump:
-        return BumpType.PATCH
-    return BumpType.NONE
+    return result
 
 
 def _calculate_compliance(
@@ -261,13 +264,17 @@ def lasv_main():
     context = LasvContext()
     context.load()
 
+    # Set the model in context if provided
+    if args.model:
+        context.model = args.model
+
     if args.crate:
         print(f"Processing only crate: {args.crate}")
     else:
         print("Processing all crates.")
         crates.list_crates(context)
 
-    crates.process(context, args.crate, args.model)
+    crates.process(context, args.crate)
 
 # Program entry point
 if __name__ == "__main__":

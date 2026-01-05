@@ -83,7 +83,7 @@ def is_private_package(spec_path: str) -> bool:
 
 
 def compare_specs(
-    context: "LasvContext", crate: str, v1: str, v2: str, model: str = None
+    context: "LasvContext", crate: str, v1: str, v2: str
 ) -> None:
     """
     Compare public specifications (*.ads files) between two releases to identify
@@ -112,7 +112,7 @@ def compare_specs(
     for spec in all_specs:
         p1 = specs_v1.get(spec)
         p2 = specs_v2.get(spec)
-        compare_spec_files(context, crate, v2, p1, p2, model)
+        compare_spec_files(context, crate, v2, p1, p2)
 
 
 def compare_spec_files(
@@ -121,7 +121,6 @@ def compare_spec_files(
     version: str,
     path1: Optional[str],
     path2: Optional[str],
-    model: str = None,
 ) -> None:
     """
     Compare two paths to the same *.ads file.
@@ -169,7 +168,7 @@ def compare_spec_files(
         return
 
     # Both exist and are public, so we will compare their content.
-    specs_module.compare_spec_content(context, crate, version, path1, path2, model)
+    specs_module.compare_spec_content(context, crate, version, path1, path2)
 
 
 def retrieve(crate, version: str) -> None:
@@ -203,7 +202,7 @@ def retrieve(crate, version: str) -> None:
         return
 
 
-def find_pairs(context: "LasvContext", crate: str, model: str = None) -> int:
+def find_pairs(context: "LasvContext", crate: str) -> int:
     """
     Find all pairs of consecutive releases for a given crate.
     For each pair, retrieve its sources using retrieve().
@@ -263,7 +262,7 @@ def find_pairs(context: "LasvContext", crate: str, model: str = None) -> int:
             context.clear_diagnosis(crate)
             context.start_diagnosis(crate, v2, "files")
 
-            compare_specs(context, crate, v1, v2, model)
+            compare_specs(context, crate, v1, v2)
 
             # Finish diagnosis for 'files' analyzer
             context.finish_diagnosis(crate, v1, v2, "files")

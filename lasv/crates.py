@@ -94,7 +94,7 @@ def list_crates(context : 'LasvContext'):
 
 
 def process(
-    context: "LasvContext", target_crate: str = None, model: str = None
+    context: "LasvContext", target_crate: str = None
 ) -> None:
     """
     For each crate in context's 'crates' list (or only target_crate if given),
@@ -112,6 +112,6 @@ def process(
 
     for crate in crates_to_process:
         print(f"Processing crate: {crate}")
-        total_pairs += releases.find_pairs(context, crate, model)
+        total_pairs += releases.find_pairs(context, crate)
 
     print(f"Total release pairs: {total_pairs}")
