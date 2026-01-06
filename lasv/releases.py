@@ -218,6 +218,44 @@ def retrieve(crate, version: str) -> None:
         return
 
 
+def fix_version(v: str) -> str:
+    """
+    Fix version string to ensure it has proper format for alr.
+    Adds '.0.0' if no dots, '.0' if only one dot.
+    """
+    # if a version doesn't contain dots, we add '.0.0' to circumvent alr issues
+    if '.' not in v:
+        return f"{v}.0.0"
+    # If version has only one dot, add '.0'
+    if v.count('.') == 1:
+        return f"{v}.0"
+    return v
+
+
+def find_previous_version(crate: str, version: str) -> Optional[str]:
+    """
+    Find the previous version of a crate before the given version.
+    Returns the previous version string, or None if not found.
+    """
+    try:
+        prev_result = subprocess.run(
+            ["alr", "--format", "show", f"{crate}<{version}"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+
+        if prev_result.stdout.strip() == "":
+            return None
+
+        prev_info = json.loads(prev_result.stdout)
+        return fix_version(prev_info.get("version"))
+
+    except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"Error finding previous version for {crate}<{version}: {e}")
+        return None
+
+
 def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
     """
     Find all pairs of consecutive releases for a given crate.
@@ -225,15 +263,6 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
     If redo is True, remove existing diagnosis and redo it.
     Returns the count of pairs found.
     """
-
-    def fix_version(v: str) -> str:
-        # if a version doesn't contain dots, we add '.0.0' to circumvent alr issues
-        if '.' not in v:
-            return f"{v}.0.0"
-        # If version has only one dot, add '.0'
-        if v.count('.') == 1:
-            return f"{v}.0"
-        return v
 
 
     found_count = 0
@@ -258,87 +287,69 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
     # Loop until no more previous versions
     while True:
         # Find previous release info with `alr show`
-        try:
-            prev_result = subprocess.run(
-                ["alr", "--format", "show", f"{crate}<{v2}"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
+        v1 = find_previous_version(crate, v2)
 
-            if prev_result.stdout.strip() == "":
-                if found_count == 0:
-                    print(f"   No release <{v2} found.")
-                return found_count
+        if v1 is None:
+            if found_count == 0:
+                print(f"   No release <{v2} found.")
+            return found_count
 
-            prev_info = json.loads(prev_result.stdout)
+        # Skip pairs where v1 is pre-1.0.0 (those don't have to respect semver)
+        v1_parts = v1.split('.')
+        if len(v1_parts) >= 1 and int(v1_parts[0]) < 1:
+            print(f"   Skipping pair {v1} -> {v2} (v1 is pre-1.0.0)")
+            v2 = v1
+            continue
 
-            v1 = fix_version(prev_info.get("version"))
+        print(f"   Found pair: {v1} -> {v2}")
+        found_count += 1
+        if not first_retrieved:
+            retrieve(crate, v2)
+            first_retrieved = True
+        retrieve(crate, v1)
 
-            # Skip pairs where v1 is pre-1.0.0 (those don't have to respect semver)
-            v1_parts = v1.split('.')
-            if len(v1_parts) >= 1 and int(v1_parts[0]) < 1:
-                print(f"   Skipping pair {v1} -> {v2} (v1 is pre-1.0.0)")
-                v2 = v1
-                continue
+        # Perform the actual comparison of specs
+        # Check if 'files' diagnosis already exists for this version
+        files_diagnosis_exists = (
+            'releases' in context.data['crates'][crate] and
+            v2 in context.data['crates'][crate]['releases'] and
+            'diagnosis' in context.data['crates'][crate]['releases'][v2] and
+            'files' in context.data['crates'][crate]['releases'][v2]['diagnosis']
+        )
 
-            print(f"   Found pair: {v1} -> {v2}")
-            found_count += 1
-            if not first_retrieved:
-                retrieve(crate, v2)
-                first_retrieved = True
-            retrieve(crate, v1)
+        # If redo is True, remove existing diagnosis
+        if redo and files_diagnosis_exists and not context.model:
+            del context.data['crates'][crate]['releases'][v2]['diagnosis']['files']
+            files_diagnosis_exists = False
+            print(f"      Removed existing 'files' diagnosis")
 
-            # Perform the actual comparison of specs
-            # Check if 'files' diagnosis already exists for this version
-            files_diagnosis_exists = (
+        if not files_diagnosis_exists:
+            context.start_diagnosis(crate, v2, "files")
+            compare_specs(context, crate, v1, v2)
+            context.finish_diagnosis(crate, v1, v2, "files")
+        else:
+            print(f"      Skipping 'files' diagnosis (already exists)")
+
+        # If a model is provided, check if model diagnosis exists and run it if not
+        if context.model:
+            model_diagnosis_exists = (
                 'releases' in context.data['crates'][crate] and
                 v2 in context.data['crates'][crate]['releases'] and
                 'diagnosis' in context.data['crates'][crate]['releases'][v2] and
-                'files' in context.data['crates'][crate]['releases'][v2]['diagnosis']
+                context.model in context.data['crates'][crate]['releases'][v2]['diagnosis']
             )
 
-            # If redo is True, remove existing diagnosis
-            if redo and files_diagnosis_exists and not context.model:
-                del context.data['crates'][crate]['releases'][v2]['diagnosis']['files']
-                files_diagnosis_exists = False
-                print(f"      Removed existing 'files' diagnosis")
+            # If redo is True, remove existing model diagnosis
+            if redo and model_diagnosis_exists:
+                del context.data['crates'][crate]['releases'][v2]['diagnosis'][context.model]
+                model_diagnosis_exists = False
+                print(f"      Removed existing '{context.model}' diagnosis")
 
-            if not files_diagnosis_exists:
-                context.start_diagnosis(crate, v2, "files")
+            if not model_diagnosis_exists:
+                context.start_diagnosis(crate, v2, context.model)
                 compare_specs(context, crate, v1, v2)
-                context.finish_diagnosis(crate, v1, v2, "files")
+                context.finish_diagnosis(crate, v1, v2, context.model)
             else:
-                print(f"      Skipping 'files' diagnosis (already exists)")
+                print(f"      Skipping '{context.model}' diagnosis (already exists)")
 
-            # If a model is provided, check if model diagnosis exists and run it if not
-            if context.model:
-                model_diagnosis_exists = (
-                    'releases' in context.data['crates'][crate] and
-                    v2 in context.data['crates'][crate]['releases'] and
-                    'diagnosis' in context.data['crates'][crate]['releases'][v2] and
-                    context.model in context.data['crates'][crate]['releases'][v2]['diagnosis']
-                )
-
-                # If redo is True, remove existing model diagnosis
-                if redo and model_diagnosis_exists:
-                    del context.data['crates'][crate]['releases'][v2]['diagnosis'][context.model]
-                    model_diagnosis_exists = False
-                    print(f"      Removed existing '{context.model}' diagnosis")
-
-                if not model_diagnosis_exists:
-                    context.start_diagnosis(crate, v2, context.model)
-                    compare_specs(context, crate, v1, v2)
-                    context.finish_diagnosis(crate, v1, v2, context.model)
-                else:
-                    print(f"      Skipping '{context.model}' diagnosis (already exists)")
-
-            v2 = v1
-
-        except (
-            subprocess.CalledProcessError,
-            FileNotFoundError,
-            json.JSONDecodeError,
-        ) as e:
-            print(f"Error checking crate {crate}<{v2}: {e}")
-            return found_count
+        v2 = v1
