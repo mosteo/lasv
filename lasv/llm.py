@@ -15,7 +15,7 @@ def query_model(model: str, spec1_content: str, spec2_content: str) -> str:
     """
     api_key = os.environ.get("OPENROUTER_API_KEY")
 
-    prompt = prompts.INSTRUCTIONS["simple"]
+    prompt = prompts.INSTRUCTIONS["detailed"]
     user_content = f"OLD:\n{spec1_content}\n\nNEW:\n{spec2_content}"
 
     try:

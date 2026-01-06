@@ -90,20 +90,29 @@ def list_crates(context : 'LasvContext'):
 
     # Go over crate.name and use `alr show` to check if it is binary. A crate
     # is binary if its 'origin' contains a 'case(*)' key.
-    for crate in tqdm(crates_info, desc="Identifying binary crates"):
+    for crate in tqdm(crates_info, desc="Identifying source crates"):
         crate_name = crate.get('name')
         list_crate(context, crate_name)
 
     context.save()
-    print(f"Found {len(context.data['crates'])} source crates out of {len(crates_info)}.")
+    # Crates with binary or external set to True are not source crates:
+    source_crates = {
+        name: info for name, info in context.data['crates'].items()
+        if not info.get('binary', False) and not info.get('external', False)
+    }
+    print(f"Found {len(source_crates)} source crates out of {len(crates_info)}.")
 
 
 def process(
-    context: "LasvContext", target_crate: str = None
+    context: "LasvContext", target_crate: str | None = None,
+    list_only: bool = False, redo: bool = False
 ) -> None:
     """
     For each crate in context's 'crates' list (or only target_crate if given),
     find all pairs of consecutive releases and retrieve their sources.
+
+    If list_only is True, skip pair detection and analysis.
+    If redo is True, remove existing diagnosis and redo it.
     """
 
     crates_to_process = []
@@ -113,10 +122,14 @@ def process(
     else:
         crates_to_process = context.data.get('crates', [])
 
+    if list_only:
+        print(f"Listed {len(crates_to_process)} crate(s).")
+        return
+
     total_pairs = 0
 
     for crate in crates_to_process:
         print(f"Processing crate: {crate}")
-        total_pairs += releases.find_pairs(context, crate)
+        total_pairs += releases.find_pairs(context, crate, redo=redo)
 
     print(f"Total release pairs: {total_pairs}")

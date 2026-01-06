@@ -108,7 +108,7 @@ class LasvContext:
         """
         Record a detected change.
         """
-        print(f"{change.severity.value} ({change.line}, {change.col}): {change.description}")
+        print(f"            {change.severity.value} ({change.line}, {change.col}): {change.description}")
 
         # Ensure all required parent keys exist before storing anything new.
         # Up to release must already exist as it was created during fetching.
@@ -255,6 +255,16 @@ def lasv_main():
         "--model",
         help="LLM model to use for analysis (optional)."
     )
+    parser.add_argument(
+        "--list-only",
+        action="store_true",
+        help="Only list crates without performing pair detection and analysis."
+    )
+    parser.add_argument(
+        "--redo",
+        action="store_true",
+        help="Remove existing diagnosis and redo it."
+    )
     args = parser.parse_args()
 
     if args.model and not os.environ.get("OPENROUTER_API_KEY"):
@@ -274,7 +284,7 @@ def lasv_main():
         print("Processing all crates.")
         crates.list_crates(context)
 
-    crates.process(context, args.crate)
+    crates.process(context, args.crate, list_only=args.list_only, redo=args.redo)
     context.save()
 
 # Program entry point

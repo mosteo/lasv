@@ -1,6 +1,7 @@
 """
 This module is responsible for comparing the content of two Ada package specifications.
 """
+import os
 import re
 from lasv_main import LasvContext, ChangeType, ChangeInfo
 from lasv import llm
@@ -12,6 +13,8 @@ def _get_public_spec(path: str) -> str:
     """
     with open(path, "r", encoding="utf-8") as f:
         lines = f.readlines()
+
+    return '\n'.join(lines)
 
     uncommented_lines = [re.sub(r"--.*", "", line) for line in lines]
 
@@ -56,13 +59,21 @@ def compare_spec_content(
     spec2_public = _get_public_spec(path2)
 
     if spec1_public == spec2_public:
+        print(f"         Identical spec in {os.path.basename(path2)}")
         return
 
     response = llm.query_model(context.model, spec1_public, spec2_public)
 
+    first_change = True
     for line in response.splitlines():
         match = re.match(r"(MAJOR|minor) \((\d+), (\d+)\): (.*)", line)
         if match:
+            # Print filename before the first change
+            if first_change:
+                filename = os.path.basename(path2)
+                print(f"         {filename}:")
+                first_change = False
+
             severity_str, line_num, col_num, description = match.groups()
             severity = (
                 ChangeType.MAJOR
@@ -81,3 +92,6 @@ def compare_spec_content(
                     description,
                 ),
             )
+
+    if first_change:
+        print(f"         No semantic changes in {os.path.basename(path2)}")

@@ -69,10 +69,23 @@ def is_private_package(spec_path: str) -> bool:
 
         cleaned_content = ' '.join(cleaned_lines).lower()
 
-        # Find positions of 'private' and 'package' keywords
+        # Remove extra whitespace
+        cleaned_content = re.sub(r'\s+', ' ', cleaned_content)
+
+        # Remove "private with", which are not package privacy indicators
+        cleaned_content = re.sub(r'private with', '', cleaned_content)
+
+        # Find positions of 'private', 'generic', 'package' keywords
         # Use word boundaries to avoid matching substrings
         private_match = re.search(r'\bprivate\b', cleaned_content)
+        generic_match = re.search(r'\bgeneric\b', cleaned_content)
         package_match = re.search(r'\bpackage\b', cleaned_content)
+
+        # Private must come before generic, not to be confused with "is private"
+        # or "with private" formal specifications.
+        if generic_match and private_match:
+            if private_match.start() > generic_match.start():
+                private_match = None  # Ignore this private occurrence
 
         if private_match and package_match:
             return private_match.start() < package_match.start()
@@ -96,7 +109,7 @@ def compare_specs(
     4. Handle missing specs (minor or major change depending on which version is missing it).
     """
 
-    print(f"      Comparing specs {v1} -> {v2}...")
+    print(f"      Comparing specs {v1} -> {v2} (model: {context.model})...")
     try:
         path_v1 = get_release_path(crate, v1)
         path_v2 = get_release_path(crate, v2)
@@ -134,9 +147,10 @@ def compare_spec_files(
             # Private packages are not part of public API
             return
         # File added in v2. Minor change (backward compatible addition).
-        context.emit_change(crate, version, 'files',
-                            ChangeInfo(ChangeType.MINOR, 0, 0,
-                                       f"Public spec file added: {os.path.basename(path2)}"))
+        if context.model is None:
+            context.emit_change(crate, version, 'files',
+                                ChangeInfo(ChangeType.MINOR, 0, 0,
+                                        f"Public spec file added: {os.path.basename(path2)}"))
         return
 
     if path2 is None:
@@ -145,9 +159,10 @@ def compare_spec_files(
             # Private packages are not part of public API
             return
         # File removed in v2. Major change (backward incompatible removal).
-        context.emit_change(crate, version, 'files',
-                            ChangeInfo(ChangeType.MAJOR, 0, 0,
-                                       f"Public spec file removed: {os.path.basename(path1)}"))
+        if context.model is None:
+            context.emit_change(crate, version, 'files',
+                                ChangeInfo(ChangeType.MAJOR, 0, 0,
+                                           f"Public spec file removed: {os.path.basename(path1)}"))
         return
 
     # Both files exist - check privacy status
@@ -156,6 +171,7 @@ def compare_spec_files(
 
     # If both exist and private, no change.
     if is_private_1 and is_private_2:
+        print(f"         Skipping private spec in {os.path.basename(path2)}")
         return
 
     # if file exists in both, but is private only in one case, this affects the public API.
@@ -202,10 +218,11 @@ def retrieve(crate, version: str) -> None:
         return
 
 
-def find_pairs(context: "LasvContext", crate: str) -> int:
+def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
     """
     Find all pairs of consecutive releases for a given crate.
     For each pair, retrieve its sources using retrieve().
+    If redo is True, remove existing diagnosis and redo it.
     Returns the count of pairs found.
     """
 
@@ -249,14 +266,6 @@ def find_pairs(context: "LasvContext", crate: str) -> int:
                 check=True,
             )
 
-            if "external" in prev_result.stdout:
-                print("   Skipping: external release.")
-                return found_count
-            if "Not found" in prev_result.stdout:
-                if found_count == 0:
-                    print(f"   No release <{v2} found.")
-                return found_count
-
             if prev_result.stdout.strip() == "":
                 if found_count == 0:
                     print(f"   No release <{v2} found.")
@@ -265,6 +274,14 @@ def find_pairs(context: "LasvContext", crate: str) -> int:
             prev_info = json.loads(prev_result.stdout)
 
             v1 = fix_version(prev_info.get("version"))
+
+            # Skip pairs where v1 is pre-1.0.0 (those don't have to respect semver)
+            v1_parts = v1.split('.')
+            if len(v1_parts) >= 1 and int(v1_parts[0]) < 1:
+                print(f"   Skipping pair {v1} -> {v2} (v1 is pre-1.0.0)")
+                v2 = v1
+                continue
+
             print(f"   Found pair: {v1} -> {v2}")
             found_count += 1
             if not first_retrieved:
@@ -281,12 +298,40 @@ def find_pairs(context: "LasvContext", crate: str) -> int:
                 'files' in context.data['crates'][crate]['releases'][v2]['diagnosis']
             )
 
+            # If redo is True, remove existing diagnosis
+            if redo and files_diagnosis_exists and not context.model:
+                del context.data['crates'][crate]['releases'][v2]['diagnosis']['files']
+                files_diagnosis_exists = False
+                print(f"      Removed existing 'files' diagnosis")
+
             if not files_diagnosis_exists:
                 context.start_diagnosis(crate, v2, "files")
                 compare_specs(context, crate, v1, v2)
                 context.finish_diagnosis(crate, v1, v2, "files")
             else:
                 print(f"      Skipping 'files' diagnosis (already exists)")
+
+            # If a model is provided, check if model diagnosis exists and run it if not
+            if context.model:
+                model_diagnosis_exists = (
+                    'releases' in context.data['crates'][crate] and
+                    v2 in context.data['crates'][crate]['releases'] and
+                    'diagnosis' in context.data['crates'][crate]['releases'][v2] and
+                    context.model in context.data['crates'][crate]['releases'][v2]['diagnosis']
+                )
+
+                # If redo is True, remove existing model diagnosis
+                if redo and model_diagnosis_exists:
+                    del context.data['crates'][crate]['releases'][v2]['diagnosis'][context.model]
+                    model_diagnosis_exists = False
+                    print(f"      Removed existing '{context.model}' diagnosis")
+
+                if not model_diagnosis_exists:
+                    context.start_diagnosis(crate, v2, context.model)
+                    compare_specs(context, crate, v1, v2)
+                    context.finish_diagnosis(crate, v1, v2, context.model)
+                else:
+                    print(f"      Skipping '{context.model}' diagnosis (already exists)")
 
             v2 = v1
 
