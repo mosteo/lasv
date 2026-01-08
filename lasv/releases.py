@@ -8,7 +8,9 @@ import shutil
 import subprocess
 from typing import Optional
 
-from lasv_main import LasvContext, ChangeType, ChangeInfo
+import semver
+
+from lasv_main import LasvContext, ChangeType, ChangeInfo, BumpType, _detect_version_bump
 from lasv import specs as specs_module
 from lasv import colors
 
@@ -290,6 +292,9 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
 
 
     found_count = 0
+    major_found = False
+    minor_found = False
+    patch_found = False
 
     # First, retrieve last version from context
     crate_info = context.data["crates"].get(crate, {})
@@ -324,6 +329,44 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
             print(f"   Skipping pair {v1} -> {v2} (v1 is pre-1.0.0)")
             v2 = v1
             continue
+
+        bump_type = None
+        if not context.full:
+            try:
+                bump_type = _detect_version_bump(
+                    semver.Version.parse(v1),
+                    semver.Version.parse(v2),
+                )
+            except ValueError:
+                bump_type = None
+
+            if bump_type == BumpType.MAJOR:
+                if major_found:
+                    print(colors.lilac(
+                        f"   Skipping pair {v1} -> {v2} (major bump already processed)"
+                    ))
+                    v2 = v1
+                    continue
+                major_found = True
+            elif bump_type == BumpType.MINOR:
+                if minor_found:
+                    print(colors.lilac(
+                        f"   Skipping pair {v1} -> {v2} (minor bump already processed)"
+                    ))
+                    v2 = v1
+                    continue
+                minor_found = True
+            elif bump_type == BumpType.PATCH:
+                if patch_found:
+                    print(colors.lilac(
+                        f"   Skipping pair {v1} -> {v2} (patch bump already processed)"
+                    ))
+                    v2 = v1
+                    continue
+                patch_found = True
+            else:
+                v2 = v1
+                continue
 
         print(f"   Found pair: {colors.version(v1)} -> {colors.version(v2)}")
         found_count += 1
@@ -387,7 +430,12 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
                 context.finish_diagnosis_with_error(crate, v2,
                                                     context.model, str(e))
 
-        v2 = v1
+        if not context.full and major_found and minor_found and patch_found:
+            print(colors.yellow(
+                "   Stopping early: first major, minor, and patch bumps processed."
+            ))
+            break
 
         v2 = v1
 
+    return found_count

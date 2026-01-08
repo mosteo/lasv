@@ -30,6 +30,19 @@ def yellow(text: str) -> str:
     return f"{Fore.YELLOW}{text}{Style.RESET_ALL}"
 
 
+def lilac(text: str) -> str:
+    """
+    Format text in lilac (for informational skips).
+
+    Args:
+        text: The text to colorize
+
+    Returns:
+        The text wrapped in light magenta color codes
+    """
+    return f"{Fore.LIGHTMAGENTA_EX}{text}{Style.RESET_ALL}"
+
+
 def crate(text: str) -> str:
     """
     Format text as a crate name (bold light cyan/blue).

@@ -66,6 +66,7 @@ class LasvContext:
         self.filename = filename
         self.data = {}
         self.model = None
+        self.full = False
 
     def load(self):
         """Load context from YAML file."""
@@ -286,6 +287,11 @@ def lasv_main():
         action="store_true",
         help="Remove existing diagnosis and redo it."
     )
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Enable full analysis mode."
+    )
     args = parser.parse_args()
 
     if args.model and not os.environ.get("OPENROUTER_API_KEY"):
@@ -298,6 +304,7 @@ def lasv_main():
     # Set the model in context if provided
     if args.model:
         context.model = args.model
+    context.full = args.full
 
     if args.crate:
         print(f"Processing only crate: {args.crate}")
