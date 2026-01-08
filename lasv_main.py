@@ -37,6 +37,7 @@ class Compliance(Enum):
     STRICT = "strict"
     LAX = "lax"
     NO = "no"
+    ERROR = "error" # Error during analysis
 
 
 class BumpType(Enum):
@@ -54,6 +55,8 @@ class ChangeInfo:
     line: int
     col: int
     description: str
+    filename: str = ""  # Optional filename where the change occurred (new version)
+    old_filename: str = ""  # Optional filename for the old version (for diffs)
 
 
 class LasvContext:
@@ -118,12 +121,17 @@ class LasvContext:
             self.data['crates'][crate]['releases'][version]['diagnosis'][analyzer] = {'changes': []}
 
         changes = self.data['crates'][crate]['releases'][version]['diagnosis'][analyzer]['changes']
-        changes.append({
+        change_dict = {
             'severity': change.severity.value,
             'line': change.line,
             'col': change.col,
             'description': change.description
-        })
+        }
+        if change.filename:
+            change_dict['filename'] = change.filename
+        if change.old_filename:
+            change_dict['old_filename'] = change.old_filename
+        changes.append(change_dict)
 
     def finish_diagnosis(self, crate: str, prev_version: str,
                         curr_version: str, analyzer: str) -> None:
@@ -158,6 +166,19 @@ class LasvContext:
                 del diag['noncompliance']
             print(f"      [{analyzer}: COMPLIANT (strict)]")
 
+        self.save()
+
+
+    def finish_diagnosis_with_error(self, crate: str, curr_version: str,
+                                   analyzer: str, error_message: str) -> None:
+        """
+        Mark diagnosis as errored with a message.
+        """
+        diag = self.data['crates'][crate]['releases'][curr_version] \
+                        ['diagnosis'][analyzer]
+        diag['compliant'] = Compliance.ERROR.value
+        diag['error_message'] = error_message
+        print(f"      [{analyzer}: ERROR] {error_message}")
         self.save()
 
 

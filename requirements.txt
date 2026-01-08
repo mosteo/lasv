@@ -1,3 +1,7 @@
+# Must be kept in alphabetical order (case insensitive)
+
+colorama
+PyQt6
 pyyaml
 requests
 semver

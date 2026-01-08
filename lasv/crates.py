@@ -6,6 +6,7 @@ import json
 from tqdm import tqdm
 from lasv_main import LasvContext
 from lasv import releases
+from lasv import colors
 
 
 def list_crate(context: 'LasvContext', crate_name: str) -> None:
@@ -129,7 +130,7 @@ def process(
     total_pairs = 0
 
     for crate in crates_to_process:
-        print(f"Processing crate: {crate}")
+        print(f"Processing crate: {colors.crate(crate)}")
         total_pairs += releases.find_pairs(context, crate, redo=redo)
 
     print(f"Total release pairs: {total_pairs}")

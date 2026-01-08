@@ -59,7 +59,10 @@ def compare_spec_content(
     spec2_public = _get_public_spec(path2)
 
     if spec1_public == spec2_public:
-        print(f"         Identical spec in {os.path.basename(path2)}")
+        # Include parent folder in the output
+        parent_folder = os.path.basename(os.path.dirname(path2))
+        filename = os.path.basename(path2)
+        print(f"         Identical spec in {parent_folder}/{filename}")
         return
 
     response = llm.query_model(context.model, spec1_public, spec2_public)
@@ -70,8 +73,9 @@ def compare_spec_content(
         if match:
             # Print filename before the first change
             if first_change:
+                parent_folder = os.path.basename(os.path.dirname(path2))
                 filename = os.path.basename(path2)
-                print(f"         {filename}:")
+                print(f"         {parent_folder}/{filename}:")
                 first_change = False
 
             severity_str, line_num, col_num, description = match.groups()
@@ -81,6 +85,7 @@ def compare_spec_content(
                 else ChangeType.MINOR
             )
 
+            # Store the full path for the change info (both old and new)
             context.emit_change(
                 crate,
                 version,
@@ -90,8 +95,14 @@ def compare_spec_content(
                     int(line_num),
                     int(col_num),
                     description,
+                    path2,
+                    path1,
                 ),
             )
 
     if first_change:
-        print(f"         No semantic changes in {os.path.basename(path2)}")
+        # Include parent folder in the output
+        parent_folder = os.path.basename(os.path.dirname(path2))
+        filename = os.path.basename(path2)
+        print(f"         No semantic changes in {parent_folder}/{filename}")
+        parent_folder = os.path.basename(os.path.dirname(path2))

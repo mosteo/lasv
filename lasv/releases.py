@@ -10,6 +10,7 @@ from typing import Optional
 
 from lasv_main import LasvContext, ChangeType, ChangeInfo
 from lasv import specs as specs_module
+from lasv import colors
 
 
 def get_release_path(crate: str, version: str) -> str:
@@ -34,12 +35,32 @@ def get_specs(release_path: str) -> dict[str, str]:
     Scans the release path for *.ads files in immediate 'src' or 'source'
     subdirectories.
     Returns a dict mapping {filename: full_path}.
+    Excludes folders named: test, tests, testsuite, demo, example, examples,
+    prover, proof, proofs.
     """
+    # Folders to exclude (case-insensitive)
+    excluded_folders = {
+        'demo', 'demos',
+        'example', 'examples',
+        'impl', 'implementation',
+        'private', 'priv',
+        'prover', 'provers', 'proof', 'proofs',
+        'test', 'tester', 'tests', 'testsuite', 'testsuites',
+    }
+
     specs = {}
     for subdir in ["src", "source"]:
         dir_path = os.path.join(release_path, subdir)
         if os.path.exists(dir_path):
-            for root, _, files in os.walk(dir_path):
+            for root, dirs, files in os.walk(dir_path):
+                # Filter out excluded directories (modifying dirs in-place affects os.walk)
+                dirs[:] = [d for d in dirs if d.lower() not in excluded_folders]
+
+                # Check if current directory itself should be excluded
+                current_dir_name = os.path.basename(root).lower()
+                if current_dir_name in excluded_folders:
+                    continue
+
                 for file in files:
                     if file.endswith(".ads"):
                         # We use file name as key. Ambiguity if same filename
@@ -143,26 +164,28 @@ def compare_spec_files(
     """
     if path1 is None:
         # File added in v2. Check if it's a private package first.
-        if is_private_package(path2):
+        if path2 and is_private_package(path2):
             # Private packages are not part of public API
             return
         # File added in v2. Minor change (backward compatible addition).
-        if context.model is None:
+        if context.model is None and path2:
             context.emit_change(crate, version, 'files',
                                 ChangeInfo(ChangeType.MINOR, 0, 0,
-                                        f"Public spec file added: {os.path.basename(path2)}"))
+                                        f"Public spec file added: {os.path.basename(path2)}",
+                                        path2, ""))
         return
 
     if path2 is None:
         # File removed in v2. Check if it was a private package.
-        if is_private_package(path1):
+        if path1 and is_private_package(path1):
             # Private packages are not part of public API
             return
         # File removed in v2. Major change (backward incompatible removal).
-        if context.model is None:
+        if context.model is None and path1:
             context.emit_change(crate, version, 'files',
                                 ChangeInfo(ChangeType.MAJOR, 0, 0,
-                                           f"Public spec file removed: {os.path.basename(path1)}"))
+                                           f"Public spec file removed: {os.path.basename(path1)}",
+                                           "", path1))
         return
 
     # Both files exist - check privacy status
@@ -180,7 +203,8 @@ def compare_spec_files(
         action = "added" if is_private_1 else "removed"
         context.emit_change(crate, version, 'files',
                             ChangeInfo(change_type, 0, 0,
-                                       f"Public spec file {action}: {os.path.basename(path2)}"))
+                                       f"Public spec file {action}: {os.path.basename(path2)}",
+                                       path2, path1))
         return
 
     # Both exist and are public, so we will compare their content.
@@ -301,7 +325,7 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
             v2 = v1
             continue
 
-        print(f"   Found pair: {v1} -> {v2}")
+        print(f"   Found pair: {colors.version(v1)} -> {colors.version(v2)}")
         found_count += 1
         if not first_retrieved:
             retrieve(crate, v2)
@@ -323,12 +347,17 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
             files_diagnosis_exists = False
             print(f"      Removed existing 'files' diagnosis")
 
-        if not files_diagnosis_exists:
-            context.start_diagnosis(crate, v2, "files")
-            compare_specs(context, crate, v1, v2)
-            context.finish_diagnosis(crate, v1, v2, "files")
-        else:
-            print(f"      Skipping 'files' diagnosis (already exists)")
+        try:
+            if not files_diagnosis_exists:
+                context.start_diagnosis(crate, v2, "files")
+                compare_specs(context, crate, v1, v2)
+                context.finish_diagnosis(crate, v1, v2, "files")
+            else:
+                print(f"      Skipping 'files' diagnosis (already exists)")
+        except Exception as e:
+            print(f"      Error during file-based diagnosis: {e}")
+            # Set diagnosis to error and store the error as the reason
+            context.finish_diagnosis_with_error(crate, v2, "files", str(e))
 
         # If a model is provided, check if model diagnosis exists and run it if not
         if context.model:
@@ -345,11 +374,20 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
                 model_diagnosis_exists = False
                 print(f"      Removed existing '{context.model}' diagnosis")
 
-            if not model_diagnosis_exists:
-                context.start_diagnosis(crate, v2, context.model)
-                compare_specs(context, crate, v1, v2)
-                context.finish_diagnosis(crate, v1, v2, context.model)
-            else:
-                print(f"      Skipping '{context.model}' diagnosis (already exists)")
+            try:
+                if not model_diagnosis_exists:
+                    context.start_diagnosis(crate, v2, context.model)
+                    compare_specs(context, crate, v1, v2)
+                    context.finish_diagnosis(crate, v1, v2, context.model)
+                else:
+                    print(f"      Skipping '{context.model}' diagnosis (already exists)")
+            except Exception as e:
+                print(f"      Error during model-based diagnosis: {e}")
+                # Set diagnosis to error and store the error as the reason
+                context.finish_diagnosis_with_error(crate, v2,
+                                                    context.model, str(e))
 
         v2 = v1
+
+        v2 = v1
+

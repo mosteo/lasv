@@ -10,7 +10,7 @@ minor (line, col): description
 
 - Use "MAJOR" for backwards incompatible changes.
 - Use "minor" for backwards compatible additions or changes.
-- (line, col) should be the line and column number in the new file.
+- (line, col) should be the line and column number in the NEW file.
 - "description" must be a brief, one-line explanation of the change.
 Do not emit any other text or summary.
 """
@@ -50,9 +50,9 @@ Never report changes that do not affect source-level compatibility.
 Never report changes about inlining.
 Never report as minor changes that do not actually change the API contract.
 
-Ignorable changes:
-- Comments and whitespace changes.
-- Changes in the private part.
+Changes that MUST be ignored, as they're not relevant for semantic versioning:
+- Comments (anything after ' -- ') and whitespace changes.
+- Changes in the private parts.
 - Changes that affect only binary ABI or calling conventions without changing the source-level compatibility.
 - Changes that affect performance without changing the API contract.
 - Inlining hints.
