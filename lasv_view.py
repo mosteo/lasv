@@ -9,6 +9,7 @@ and their analysis results stored in lasv.yaml.
 import sys
 import yaml
 import difflib
+from functools import partial
 from pathlib import Path
 from typing import Any, Optional
 
@@ -19,13 +20,17 @@ try:
         QLabel, QMessageBox, QToolBar, QMenu, QCheckBox
     )
     from PyQt6.QtCore import (
-        Qt, QAbstractItemModel, QModelIndex, pyqtSignal
+        Qt, QAbstractItemModel, QModelIndex, pyqtSignal, QItemSelectionModel, QProcess
     )
-    from PyQt6.QtGui import QAction, QIcon, QFont, QColor
+    from PyQt6.QtGui import QAction, QIcon, QFont, QColor, QFontMetrics, QPalette
+    from PyQt6.QtWidgets import QStyledItemDelegate, QStyle, QStyleOptionViewItem
 except ImportError:
     print("Error: PyQt6 is not installed.")
     print("Please install it with: pip install PyQt6")
     sys.exit(1)
+
+from lasv.context import LasvContext
+from lasv import releases
 
 
 class LasvTreeItem:
@@ -37,6 +42,8 @@ class LasvTreeItem:
         self.children: list['LasvTreeItem'] = []
         self.item_type = ""  # 'crate', 'release', 'pair', 'analysis'
         self.display_name = ""
+        self.crate_name: Optional[str] = None
+        self.release_version: Optional[str] = None
 
     def add_child(self, child: 'LasvTreeItem'):
         """Add a child item."""
@@ -59,6 +66,56 @@ class LasvTreeItem:
         return 0
 
 
+class TreeItemDelegate(QStyledItemDelegate):
+    """Custom delegate to colorize agreement/conflict tag for crate items."""
+
+    def paint(self, painter, option, index):
+        item = index.internalPointer()
+        if item and item.item_type == "crate":
+            status = item.data.get("compliance_status")
+            if status in ["agreed", "conflict"]:
+                text = item.display_name
+                split_pos = text.rfind(" [")
+                if split_pos != -1:
+                    base_text = text[:split_pos]
+                    tag_text = text[split_pos:]
+
+                    opt = QStyleOptionViewItem(option)
+                    self.initStyleOption(opt, index)
+                    opt.text = ""
+                    style = opt.widget.style() if opt.widget else QApplication.style()
+                    style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
+
+                    painter.save()
+                    rect = opt.rect.adjusted(4, 0, 0, 0)
+                    palette = opt.palette
+                    text_color = palette.color(
+                        QPalette.ColorRole.HighlightedText
+                        if opt.state & QStyle.StateFlag.State_Selected
+                        else QPalette.ColorRole.Text
+                    )
+                    painter.setPen(text_color)
+                    painter.drawText(
+                        rect,
+                        Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+                        base_text,
+                    )
+
+                    metrics = QFontMetrics(opt.font)
+                    base_width = metrics.horizontalAdvance(base_text)
+                    tag_rect = rect.adjusted(base_width, 0, 0, 0)
+                    tag_color = QColor(0, 120, 0) if status == "agreed" else QColor(200, 0, 0)
+                    painter.setPen(tag_color)
+                    painter.drawText(
+                        tag_rect,
+                        Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+                        tag_text,
+                    )
+                    painter.restore()
+                    return
+        super().paint(painter, option, index)
+
+
 class LasvTreeModel(QAbstractItemModel):
     """Tree model for LASV data."""
 
@@ -75,6 +132,19 @@ class LasvTreeModel(QAbstractItemModel):
         self.beginResetModel()
         self.root_item = LasvTreeItem({"name": "Root"})
 
+        def diagnosis_verdict(analyzer_data: dict) -> str:
+            """Return a verdict based on detected changes, not version bump."""
+            if analyzer_data.get("compliant") == "error":
+                return "error"
+            changes = analyzer_data.get("changes", [])
+            if isinstance(changes, list):
+                if any(change.get("severity") == "MAJOR" for change in changes):
+                    return "major"
+                if any(change.get("severity") == "minor" for change in changes):
+                    return "minor"
+                return "none"
+            return "none"
+
         try:
             with open(self.yaml_path, 'r') as f:
                 data = yaml.safe_load(f)
@@ -90,6 +160,11 @@ class LasvTreeModel(QAbstractItemModel):
                 crate_item = LasvTreeItem(crate_data, self.root_item)
                 crate_item.item_type = "crate"
                 crate_item.display_name = crate_name
+                crate_item.crate_name = crate_name
+
+                crate_diagnosis_values = set()
+                crate_diagnosis_count = 0
+                releases = crate_data.get('releases', {})
 
                 # Add crate metadata as info
                 info_parts = []
@@ -107,11 +182,12 @@ class LasvTreeModel(QAbstractItemModel):
                 has_content = False
 
                 # Add releases
-                releases = crate_data.get('releases', {})
                 for release_version, release_data in sorted(releases.items()):
                     release_item = LasvTreeItem(release_data, crate_item)
                     release_item.item_type = "release"
                     release_item.display_name = f"Release {release_version}"
+                    release_item.crate_name = crate_name
+                    release_item.release_version = release_version
 
                     # Track if this release has any diagnosis with changes
                     release_has_changes = False
@@ -124,12 +200,16 @@ class LasvTreeModel(QAbstractItemModel):
 
                         # Track if diagnosis has any analyzers with changes
                         diag_has_analyzers = False
+                        diagnosis_values = []
+                        diagnosis_count = 0
 
                         # Add each analyzer (files, model names) under diagnosis
                         diagnosis_data = release_data['diagnosis']
                         if isinstance(diagnosis_data, dict):
                             for analyzer_name, analyzer_data in sorted(diagnosis_data.items()):
                                 if isinstance(analyzer_data, dict):
+                                    diagnosis_count += 1
+                                    diagnosis_values.append(diagnosis_verdict(analyzer_data))
                                     # Check if filter is enabled and analyzer has no changes
                                     changes = analyzer_data.get('changes', [])
                                     has_changes = isinstance(changes, list) and len(changes) > 0
@@ -140,9 +220,18 @@ class LasvTreeModel(QAbstractItemModel):
                                     analyzer_item = LasvTreeItem(analyzer_data, diag_item)
                                     analyzer_item.item_type = "analyzer"
                                     analyzer_item.display_name = analyzer_name
+                                    if 'compliant' in analyzer_data:
+                                        analyzer_item.display_name = (
+                                            f"{analyzer_name} [{analyzer_data['compliant']}]"
+                                        )
                                     diag_item.add_child(analyzer_item)
                                     diag_has_analyzers = True
                                     release_has_changes = True
+                                    diagnosis_count += 1
+                                    verdict = diagnosis_verdict(analyzer_data)
+                                    diagnosis_values.append(verdict)
+                                    crate_diagnosis_values.add(verdict)
+                                    crate_diagnosis_count += 1
 
                                     # Add compliance info
                                     if 'compliant' in analyzer_data:
@@ -179,6 +268,14 @@ class LasvTreeModel(QAbstractItemModel):
                                                     change_child_item.item_type = "change_item"
                                                     change_child_item.display_name = f"{severity} ({line}, {col}): {description}"
                                                     changes_item.add_child(change_child_item)
+
+                        if diagnosis_count >= 2:
+                            if len(set(diagnosis_values)) == 1:
+                                diag_item.display_name += " [agreed]"
+                                diag_item.data["compliance_status"] = "agreed"
+                            else:
+                                diag_item.display_name += " [conflict]"
+                                diag_item.data["compliance_status"] = "conflict"
 
                         # Only add diagnosis if it has analyzers (when filter is enabled)
                         if diag_has_analyzers or not self.filter_no_changes:
@@ -248,6 +345,13 @@ class LasvTreeModel(QAbstractItemModel):
                         has_content = True  # Crate has at least one release with content
 
                 # Only add crate if it has content or filter is disabled
+                if crate_diagnosis_count >= 2:
+                    if len(set(crate_diagnosis_values)) == 1:
+                        crate_item.display_name += " [agreed]"
+                        crate_item.data["compliance_status"] = "agreed"
+                    else:
+                        crate_item.display_name += " [conflict]"
+                        crate_item.data["compliance_status"] = "conflict"
                 if has_content or not self.filter_empty_crates:
                     self.root_item.add_child(crate_item)
 
@@ -332,6 +436,12 @@ class LasvTreeModel(QAbstractItemModel):
                 else:
                     return QColor(200, 100, 0)  # Orange for pending
             elif item.item_type in ["diagnosis", "summary", "changes"]:
+                if item.item_type == "diagnosis":
+                    status = item.data.get("compliance_status")
+                    if status == "agreed":
+                        return QColor(0, 120, 0)  # Dark green
+                    if status == "conflict":
+                        return QColor(200, 0, 0)  # Red
                 return QColor(0, 120, 200)  # Blue-ish for analysis nodes
             elif item.item_type == "analyzer":
                 return QColor(100, 100, 200)  # Purple-ish for analyzers
@@ -644,12 +754,15 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("LASV Viewer - LLM-Assisted Semantic Versioning")
         self.setGeometry(100, 100, 1200, 800)
+        self.showMaximized()
 
         # Create model
         self.model = LasvTreeModel()
+        self.model_sections = self.load_model_sections()
 
         # Create UI
         self.setup_ui()
+        self.restore_saved_state()
 
     def setup_ui(self):
         """Set up the user interface."""
@@ -701,6 +814,11 @@ class MainWindow(QMainWindow):
         collapse_btn.clicked.connect(self.collapse_all)
         button_layout.addWidget(collapse_btn)
 
+        restart_btn = QPushButton("Restart")
+        restart_btn.setMaximumWidth(90)
+        restart_btn.clicked.connect(self.restart_app)
+        button_layout.addWidget(restart_btn)
+
         # Add stretch to push buttons to the left
         button_layout.addStretch()
 
@@ -722,8 +840,10 @@ class MainWindow(QMainWindow):
         # Create tree view
         self.tree_view = QTreeView()
         self.tree_view.setModel(self.model)
+        self.tree_view.setItemDelegate(TreeItemDelegate(self.tree_view))
         self.tree_view.setHeaderHidden(False)
         self.tree_view.clicked.connect(self.on_item_clicked)
+        self.tree_view.selectionModel().currentChanged.connect(self.on_selection_changed)
         self.tree_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tree_view.customContextMenuRequested.connect(self.on_context_menu)
         splitter.addWidget(self.tree_view)
@@ -740,12 +860,167 @@ class MainWindow(QMainWindow):
         # Status bar
         self.statusBar().showMessage("Ready")
 
+    def load_model_sections(self, path: str = "models.md") -> list[tuple[str, list[str]]]:
+        """Load model names grouped by section from models.md."""
+        sections: list[tuple[str, list[str]]] = []
+        current_section = "Models"
+        current_models: list[str] = []
+        seen = set()
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    name = line.strip()
+                    if not name:
+                        continue
+                    if name.startswith("#"):
+                        if current_models:
+                            sections.append((current_section, current_models))
+                        current_section = name.lstrip("#").strip()
+                        current_models = []
+                        continue
+                    if name not in seen:
+                        seen.add(name)
+                        current_models.append(name)
+        except FileNotFoundError:
+            self.statusBar().showMessage(f"Models file not found: {path}")
+        if current_models:
+            sections.append((current_section, current_models))
+        return sections
+
+    def capture_tree_state(self) -> dict[str, object]:
+        """Capture expanded nodes and current selection."""
+        expanded_paths = set()
+
+        def walk(item: LasvTreeItem, parent_index: QModelIndex, path_prefix: list[str]):
+            for row, child in enumerate(item.children):
+                index = self.model.index(row, 0, parent_index)
+                path = path_prefix + [f"{child.item_type}:{child.display_name}"]
+                if self.tree_view.isExpanded(index):
+                    expanded_paths.add(tuple(path))
+                walk(child, index, path)
+
+        walk(self.model.root_item, QModelIndex(), [])
+
+        selected_path = None
+        current_index = self.tree_view.currentIndex()
+        if current_index.isValid():
+            selected_path = self._path_from_index(current_index)
+
+        scroll_pos = self.tree_view.verticalScrollBar().value()
+
+        return {
+            "expanded": expanded_paths,
+            "selected": selected_path,
+            "scroll": scroll_pos,
+        }
+
+    def save_view_state(self, path: str = ".lasv_view.yaml") -> None:
+        """Persist current tree state to disk."""
+        state = self.capture_tree_state()
+        data = {
+            "expanded": [list(p) for p in state.get("expanded", set())],
+            "selected": state.get("selected"),
+            "scroll": state.get("scroll"),
+        }
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                yaml.safe_dump(data, f)
+        except OSError as e:
+            self.statusBar().showMessage(f"Failed to save view state: {e}")
+
+    def restore_saved_state(self, path: str = ".lasv_view.yaml") -> None:
+        """Restore tree state from disk if present."""
+        if not Path(path).exists():
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+        except (OSError, yaml.YAMLError) as e:
+            self.statusBar().showMessage(f"Failed to load view state: {e}")
+            return
+
+        expanded = {
+            tuple(path_parts)
+            for path_parts in data.get("expanded", [])
+            if isinstance(path_parts, list)
+        }
+        selected = data.get("selected")
+        scroll = data.get("scroll")
+        self.restore_tree_state(
+            {"expanded": expanded, "selected": selected, "scroll": scroll}
+        )
+
+    def restore_tree_state(self, state: dict[str, object]) -> None:
+        """Restore expanded nodes and current selection."""
+        expanded_paths = state.get("expanded", set())
+        selected_path = state.get("selected")
+        scroll_pos = state.get("scroll")
+        path_to_index: dict[tuple[str, ...], QModelIndex] = {}
+
+        def walk(item: LasvTreeItem, parent_index: QModelIndex, path_prefix: list[str]):
+            for row, child in enumerate(item.children):
+                index = self.model.index(row, 0, parent_index)
+                path = path_prefix + [f"{child.item_type}:{child.display_name}"]
+                path_to_index[tuple(path)] = index
+                walk(child, index, path)
+
+        walk(self.model.root_item, QModelIndex(), [])
+
+        for path in expanded_paths:
+            index = path_to_index.get(path)
+            if index and index.isValid():
+                self.tree_view.setExpanded(index, True)
+
+        if selected_path:
+            index = path_to_index.get(tuple(selected_path))
+            if index and index.isValid():
+                self.tree_view.setCurrentIndex(index)
+                self.tree_view.selectionModel().setCurrentIndex(
+                    index, QItemSelectionModel.SelectionFlag.ClearAndSelect
+                )
+        if isinstance(scroll_pos, int):
+            self.tree_view.verticalScrollBar().setValue(scroll_pos)
+
+    def _path_from_index(self, index: QModelIndex) -> list[str]:
+        """Build a stable path for a tree node."""
+        parts = []
+        item = index.internalPointer()
+        while item and item.parent:
+            parts.append(f"{item.item_type}:{item.display_name}")
+            item = item.parent
+        return list(reversed(parts))
+
     def on_item_clicked(self, index: QModelIndex):
         """Handle item click in tree view."""
         if index.isValid():
             item = index.internalPointer()
             self.detail_panel.display_item(item)
             self.statusBar().showMessage(f"Selected: {item.display_name}")
+            if item.item_type in ["crate", "release"]:
+                self.expand_except_changes(index)
+
+    def on_selection_changed(self, current: QModelIndex, previous: QModelIndex):
+        """Handle selection changes for auto-expansion."""
+        if current.isValid():
+            item = current.internalPointer()
+            if item and item.item_type in ["crate", "release"]:
+                self.expand_except_changes(current)
+
+    def expand_except_changes(self, parent_index: QModelIndex) -> None:
+        """Expand all descendants except 'changes' nodes."""
+        def walk(parent_index: QModelIndex):
+            rows = self.model.rowCount(parent_index)
+            for row in range(rows):
+                child_index = self.model.index(row, 0, parent_index)
+                child_item = child_index.internalPointer()
+                if not child_item:
+                    continue
+                if child_item.item_type == "analyzer":
+                    continue
+                self.tree_view.setExpanded(child_index, True)
+                walk(child_index)
+
+        walk(parent_index)
 
     def on_context_menu(self, position):
         """Handle context menu for tree view."""
@@ -763,6 +1038,20 @@ class MainWindow(QMainWindow):
 
             if action == show_diff_action:
                 self.show_diff_for_item(item)
+        elif item.item_type == "release":
+            menu = QMenu()
+            analyze_menu = menu.addMenu("Analyze with...")
+            if not self.model_sections:
+                analyze_menu.addAction("No models found").setEnabled(False)
+            else:
+                for section_name, models in self.model_sections:
+                    section_menu = analyze_menu.addMenu(section_name)
+                    for model_name in models:
+                        action = section_menu.addAction(model_name)
+                        action.triggered.connect(
+                            partial(self.analyze_release_with_model, item, model_name)
+                        )
+            menu.exec(self.tree_view.viewport().mapToGlobal(position))
 
     def show_diff_for_item(self, item: LasvTreeItem):
         """Show diff for a change item."""
@@ -773,9 +1062,44 @@ class MainWindow(QMainWindow):
         self.detail_panel.display_diff(item)
         self.statusBar().showMessage(f"Showing diff for: {item.display_name}")
 
+    def analyze_release_with_model(self, item: LasvTreeItem, model_name: str):
+        """Run model-only analysis for a single release."""
+        crate = item.crate_name
+        version = item.release_version
+        if not crate or not version:
+            QMessageBox.warning(self, "Analyze with model", "Missing crate or release.")
+            return
+
+        self.statusBar().showMessage(
+            f"Analyzing {crate} {version} with {model_name}..."
+        )
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            context = LasvContext()
+            context.load()
+            success = releases.analyze_release_with_model(
+                context, crate, version, model_name, redo=True
+            )
+        finally:
+            QApplication.restoreOverrideCursor()
+
+        if success:
+            self.refresh_data()
+            self.statusBar().showMessage(
+                f"Analysis complete: {crate} {version} ({model_name})"
+            )
+        else:
+            QMessageBox.warning(
+                self,
+                "Analyze with model",
+                f"Analysis failed or was skipped for {crate} {version}.",
+            )
+
     def refresh_data(self):
         """Reload data from lasv.yaml."""
+        state = self.capture_tree_state()
         self.model.load_data()
+        self.restore_tree_state(state)
         self.statusBar().showMessage("Data refreshed")
 
     def expand_all(self):
@@ -788,10 +1112,24 @@ class MainWindow(QMainWindow):
         self.tree_view.collapseAll()
         self.statusBar().showMessage("Collapsed all items")
 
+    def restart_app(self):
+        """Restart the application."""
+        self.statusBar().showMessage("Restarting...")
+        self.save_view_state()
+        QApplication.quit()
+        QProcess.startDetached(sys.executable, sys.argv)
+
+    def closeEvent(self, event):
+        """Persist view state on close."""
+        self.save_view_state()
+        super().closeEvent(event)
+
     def toggle_filter(self, state: int):
         """Toggle the empty crates filter."""
         enabled = state == Qt.CheckState.Checked.value
+        state_snapshot = self.capture_tree_state()
         self.model.set_filter_empty_crates(enabled)
+        self.restore_tree_state(state_snapshot)
         if enabled:
             self.statusBar().showMessage("Hiding empty crates")
         else:
@@ -800,7 +1138,9 @@ class MainWindow(QMainWindow):
     def toggle_no_changes_filter(self, state: int):
         """Toggle the filter for diagnosis with no changes."""
         enabled = state == Qt.CheckState.Checked.value
+        state_snapshot = self.capture_tree_state()
         self.model.set_filter_no_changes(enabled)
+        self.restore_tree_state(state_snapshot)
         if enabled:
             self.statusBar().showMessage("Hiding diagnosis with no changes")
         else:

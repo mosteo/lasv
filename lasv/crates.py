@@ -4,7 +4,7 @@ This module handles the listing and processing of Alire crates.
 import subprocess
 import json
 from tqdm import tqdm
-from lasv_main import LasvContext
+from lasv.context import LasvContext
 from lasv import releases
 from lasv import colors
 

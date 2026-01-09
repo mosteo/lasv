@@ -10,7 +10,14 @@ from typing import Optional
 
 import semver
 
-from lasv_main import LasvContext, ChangeType, ChangeInfo, BumpType, _detect_version_bump
+from lasv.context import (
+    LasvContext,
+    ChangeType,
+    ChangeInfo,
+    BumpType,
+    _detect_version_bump,
+    normalize_model_name,
+)
 from lasv import specs as specs_module
 from lasv import colors
 
@@ -280,6 +287,53 @@ def find_previous_version(crate: str, version: str) -> Optional[str]:
     except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
         print(f"Error finding previous version for {crate}<{version}: {e}")
         return None
+
+
+def analyze_release_with_model(
+    context: "LasvContext", crate: str, version: str, model: str, redo: bool = True
+) -> bool:
+    """
+    Analyze a single release pair (previous -> version) using only the given model.
+    Returns True if analysis was performed, False otherwise.
+    """
+    v1 = find_previous_version(crate, version)
+    if v1 is None:
+        print(f"   No release <{version} found.")
+        return False
+
+    v1_parts = v1.split('.')
+    if len(v1_parts) >= 1 and int(v1_parts[0]) < 1:
+        print(f"   Skipping pair {v1} -> {version} (v1 is pre-1.0.0)")
+        return False
+
+    retrieve(crate, version)
+    retrieve(crate, v1)
+
+    context.model = model
+    context.model_key = normalize_model_name(model)
+    model_key = context.model_key or model
+
+    release_data = (
+        context.data
+        .setdefault('crates', {})
+        .setdefault(crate, {})
+        .setdefault('releases', {})
+        .setdefault(version, {})
+    )
+    diagnosis = release_data.get('diagnosis', {})
+    if redo and model_key in diagnosis:
+        del diagnosis[model_key]
+        print(f"      Removed existing '{model}' diagnosis")
+
+    try:
+        context.start_diagnosis(crate, version, model_key)
+        compare_specs(context, crate, v1, version)
+        context.finish_diagnosis(crate, v1, version, model_key)
+        return True
+    except Exception as e:
+        print(f"      Error during model-based diagnosis: {e}")
+        context.finish_diagnosis_with_error(crate, version, model_key, str(e))
+        return False
 
 
 def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:

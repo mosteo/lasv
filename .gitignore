@@ -1,4 +1,5 @@
 lasv.yaml*
+.lasv_view.yaml
 __pycache__
 releases
 venv

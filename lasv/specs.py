@@ -3,7 +3,7 @@ This module is responsible for comparing the content of two Ada package specific
 """
 import os
 import re
-from lasv_main import LasvContext, ChangeType, ChangeInfo
+from lasv.context import LasvContext, ChangeType, ChangeInfo
 from lasv import llm
 from lasv import colors
 
