@@ -71,48 +71,72 @@ class TreeItemDelegate(QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         item = index.internalPointer()
-        if item and item.item_type == "crate":
-            status = item.data.get("compliance_status")
-            if status in ["agreed", "conflict"]:
-                text = item.display_name
-                split_pos = text.rfind(" [")
-                if split_pos != -1:
-                    base_text = text[:split_pos]
-                    tag_text = text[split_pos:]
-
-                    opt = QStyleOptionViewItem(option)
-                    self.initStyleOption(opt, index)
-                    opt.text = ""
-                    style = opt.widget.style() if opt.widget else QApplication.style()
-                    style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
-
-                    painter.save()
-                    rect = opt.rect.adjusted(4, 0, 0, 0)
-                    palette = opt.palette
-                    text_color = palette.color(
-                        QPalette.ColorRole.HighlightedText
-                        if opt.state & QStyle.StateFlag.State_Selected
-                        else QPalette.ColorRole.Text
-                    )
-                    painter.setPen(text_color)
-                    painter.drawText(
-                        rect,
-                        Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
-                        base_text,
-                    )
-
-                    metrics = QFontMetrics(opt.font)
-                    base_width = metrics.horizontalAdvance(base_text)
-                    tag_rect = rect.adjusted(base_width, 0, 0, 0)
-                    tag_color = QColor(0, 120, 0) if status == "agreed" else QColor(200, 0, 0)
-                    painter.setPen(tag_color)
-                    painter.drawText(
-                        tag_rect,
-                        Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
-                        tag_text,
-                    )
-                    painter.restore()
+        if item and item.item_type in ["crate", "diagnosis", "analyzer"]:
+            if item.item_type in ["crate", "diagnosis"]:
+                verdict = item.data.get("diagnosis_verdict")
+                if verdict:
+                    compliance = verdict.split(":", 1)[0]
+                else:
+                    compliance = None
+                if compliance == "strict":
+                    tag_color = QColor(0, 150, 0)
+                elif compliance == "lax":
+                    tag_color = QColor(200, 150, 0)
+                elif compliance == "no" or compliance == "error":
+                    tag_color = QColor(200, 0, 0)
+                else:
+                    super().paint(painter, option, index)
                     return
+            else:
+                status = item.data.get("compliant")
+                if status == "strict":
+                    tag_color = QColor(0, 150, 0)
+                elif status == "lax":
+                    tag_color = QColor(200, 150, 0)
+                elif status == "no":
+                    tag_color = QColor(200, 0, 0)
+                else:
+                    super().paint(painter, option, index)
+                    return
+
+            text = item.display_name
+            split_pos = text.rfind(" [")
+            if split_pos != -1:
+                base_text = text[:split_pos]
+                tag_text = text[split_pos:]
+
+                opt = QStyleOptionViewItem(option)
+                self.initStyleOption(opt, index)
+                opt.text = ""
+                style = opt.widget.style() if opt.widget else QApplication.style()
+                style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
+
+                painter.save()
+                rect = opt.rect.adjusted(4, 0, 0, 0)
+                palette = opt.palette
+                text_color = palette.color(
+                    QPalette.ColorRole.HighlightedText
+                    if opt.state & QStyle.StateFlag.State_Selected
+                    else QPalette.ColorRole.Text
+                )
+                painter.setPen(text_color)
+                painter.drawText(
+                    rect,
+                    Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+                    base_text,
+                )
+
+                metrics = QFontMetrics(opt.font)
+                base_width = metrics.horizontalAdvance(base_text)
+                tag_rect = rect.adjusted(base_width, 0, 0, 0)
+                painter.setPen(tag_color)
+                painter.drawText(
+                    tag_rect,
+                    Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+                    tag_text,
+                )
+                painter.restore()
+                return
         super().paint(painter, option, index)
 
 
@@ -132,18 +156,23 @@ class LasvTreeModel(QAbstractItemModel):
         self.beginResetModel()
         self.root_item = LasvTreeItem({"name": "Root"})
 
-        def diagnosis_verdict(analyzer_data: dict) -> str:
-            """Return a verdict based on detected changes, not version bump."""
-            if analyzer_data.get("compliant") == "error":
-                return "error"
+        def diagnosis_verdict(analyzer_data: dict) -> str | None:
+            """Return compliance:severity for a diagnosis based on changes."""
+            if "changes" not in analyzer_data:
+                return None
+            compliance = analyzer_data.get("compliant", "unknown")
+            if compliance == "error":
+                return "error:major"
             changes = analyzer_data.get("changes", [])
             if isinstance(changes, list):
                 if any(change.get("severity") == "MAJOR" for change in changes):
-                    return "major"
-                if any(change.get("severity") == "minor" for change in changes):
-                    return "minor"
-                return "none"
-            return "none"
+                    severity = "major"
+                elif any(change.get("severity") == "minor" for change in changes):
+                    severity = "minor"
+                else:
+                    severity = "none"
+                return f"{compliance}:{severity}"
+            return f"{compliance}:none"
 
         try:
             with open(self.yaml_path, 'r') as f:
@@ -162,8 +191,8 @@ class LasvTreeModel(QAbstractItemModel):
                 crate_item.display_name = crate_name
                 crate_item.crate_name = crate_name
 
-                crate_diagnosis_values = set()
-                crate_diagnosis_count = 0
+                crate_verdicts = []
+                crate_non_files_analyses = 0
                 releases = crate_data.get('releases', {})
 
                 # Add crate metadata as info
@@ -208,8 +237,14 @@ class LasvTreeModel(QAbstractItemModel):
                         if isinstance(diagnosis_data, dict):
                             for analyzer_name, analyzer_data in sorted(diagnosis_data.items()):
                                 if isinstance(analyzer_data, dict):
-                                    diagnosis_count += 1
-                                    diagnosis_values.append(diagnosis_verdict(analyzer_data))
+                                    if analyzer_name == "files":
+                                        continue
+                                    verdict = diagnosis_verdict(analyzer_data)
+                                    if verdict is not None:
+                                        diagnosis_count += 1
+                                        diagnosis_values.append(verdict)
+                                        crate_verdicts.append(verdict)
+                                        crate_non_files_analyses += 1
                                     # Check if filter is enabled and analyzer has no changes
                                     changes = analyzer_data.get('changes', [])
                                     has_changes = isinstance(changes, list) and len(changes) > 0
@@ -227,11 +262,6 @@ class LasvTreeModel(QAbstractItemModel):
                                     diag_item.add_child(analyzer_item)
                                     diag_has_analyzers = True
                                     release_has_changes = True
-                                    diagnosis_count += 1
-                                    verdict = diagnosis_verdict(analyzer_data)
-                                    diagnosis_values.append(verdict)
-                                    crate_diagnosis_values.add(verdict)
-                                    crate_diagnosis_count += 1
 
                                     # Add compliance info
                                     if 'compliant' in analyzer_data:
@@ -269,13 +299,14 @@ class LasvTreeModel(QAbstractItemModel):
                                                     change_child_item.display_name = f"{severity} ({line}, {col}): {description}"
                                                     changes_item.add_child(change_child_item)
 
-                        if diagnosis_count >= 2:
-                            if len(set(diagnosis_values)) == 1:
-                                diag_item.display_name += " [agreed]"
-                                diag_item.data["compliance_status"] = "agreed"
-                            else:
-                                diag_item.display_name += " [conflict]"
-                                diag_item.data["compliance_status"] = "conflict"
+                        verdict = None
+                        if diagnosis_count == 1:
+                            verdict = diagnosis_values[0]
+                        elif diagnosis_count >= 2 and len(set(diagnosis_values)) == 1:
+                            verdict = diagnosis_values[0]
+                        if verdict:
+                            diag_item.display_name += f" [{verdict}]"
+                            diag_item.data["diagnosis_verdict"] = verdict
 
                         # Only add diagnosis if it has analyzers (when filter is enabled)
                         if diag_has_analyzers or not self.filter_no_changes:
@@ -345,13 +376,15 @@ class LasvTreeModel(QAbstractItemModel):
                         has_content = True  # Crate has at least one release with content
 
                 # Only add crate if it has content or filter is disabled
-                if crate_diagnosis_count >= 2:
-                    if len(set(crate_diagnosis_values)) == 1:
-                        crate_item.display_name += " [agreed]"
-                        crate_item.data["compliance_status"] = "agreed"
-                    else:
-                        crate_item.display_name += " [conflict]"
-                        crate_item.data["compliance_status"] = "conflict"
+                verdict = None
+                if len(crate_verdicts) == 1:
+                    verdict = crate_verdicts[0]
+                elif len(crate_verdicts) >= 2 and len(set(crate_verdicts)) == 1:
+                    verdict = crate_verdicts[0]
+                if verdict:
+                    crate_item.display_name += f" [{verdict}]"
+                    crate_item.data["diagnosis_verdict"] = verdict
+                crate_item.display_name += f" ({crate_non_files_analyses})"
                 if has_content or not self.filter_empty_crates:
                     self.root_item.add_child(crate_item)
 

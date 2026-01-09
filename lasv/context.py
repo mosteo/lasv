@@ -253,10 +253,12 @@ class LasvContext:
         self, crate: str, curr_version: str, analyzer: str, error_message: str
     ) -> None:
         """
-        Mark diagnosis as errored with a message.
+        Keep error status but remove any partial changes.
         """
         diag = self.data['crates'][crate]['releases'][curr_version] \
                         ['diagnosis'][analyzer]
+        if 'changes' in diag:
+            del diag['changes']
         diag['compliant'] = Compliance.ERROR.value
         diag['error_message'] = error_message
         print(f"      [{analyzer}: ERROR] {error_message}")
