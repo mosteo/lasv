@@ -7,6 +7,8 @@ from lasv.context import LasvContext, ChangeType, ChangeInfo
 from lasv import llm
 from lasv import colors
 
+MAX_SPEC_BYTES = 64 * 1024
+
 
 def _get_public_spec(path: str) -> str:
     """
@@ -54,6 +56,23 @@ def compare_spec_content(
     :return: None
     """
     if not context.model:
+        return
+
+    try:
+        if os.path.getsize(path1) > MAX_SPEC_BYTES:
+            print(colors.yellow(
+                f"         Skipping large spec (>64k): {os.path.basename(path1)}"
+            ))
+            return
+        if os.path.getsize(path2) > MAX_SPEC_BYTES:
+            print(colors.yellow(
+                f"         Skipping large spec (>64k): {os.path.basename(path2)}"
+            ))
+            return
+    except OSError as e:
+        print(colors.yellow(
+            f"         Skipping spec due to size check error: {e}"
+        ))
         return
 
     spec1_public = _get_public_spec(path1)
