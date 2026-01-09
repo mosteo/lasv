@@ -1,3 +1,5 @@
+.*.swp
+
 lasv.yaml*
 .lasv_view.yaml
 __pycache__

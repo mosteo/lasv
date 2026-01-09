@@ -195,12 +195,10 @@ class LasvContext:
 
         # Ensure all required parent keys exist before storing anything new.
         # Up to release must already exist as it was created during fetching.
-        if 'diagnosis' not in self.data['crates'][crate]['releases'][version]:
-            self.data['crates'][crate]['releases'][version]['diagnosis'] = {}
-        if analyzer not in self.data['crates'][crate]['releases'][version]['diagnosis']:
-            self.data['crates'][crate]['releases'][version]['diagnosis'][analyzer] = {'changes': []}
-
-        changes = self.data['crates'][crate]['releases'][version]['diagnosis'][analyzer]['changes']
+        release_data = self.data['crates'][crate]['releases'][version]
+        diagnosis = release_data.setdefault('diagnosis', {})
+        analyzer_data = diagnosis.setdefault(analyzer, {'changes': []})
+        changes = analyzer_data['changes']
         change_dict = {
             'severity': change.severity.value,
             'line': change.line,
