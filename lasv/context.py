@@ -44,26 +44,52 @@ def normalize_model_name(model: str | None) -> str | None:
     return model
 
 
-def fix_free_model_keys(context: "LasvContext") -> int:
+def fix_context_data(context: "LasvContext") -> int:
     """
     Normalize stored model keys by removing ':free' suffixes.
     Returns the number of keys updated.
     """
+    from lasv import releases
     fixed_count = 0
     crates_data = context.data.get("crates", {})
-    releases = []
-    for crate_data in crates_data.values():
-        releases.extend(crate_data.get("releases", {}).values())
-    for release_data in tqdm(releases, desc="Normalizing model keys"):
+    release_entries = []
+    for crate_name, crate_data in crates_data.items():
+        releases_dict = crate_data.get("releases", {})
+        for release_version, release_data in releases_dict.items():
+            release_entries.append((crate_name, release_version, release_data))
+    for crate_name, release_version, release_data in tqdm(
+        release_entries, desc="Normalizing model keys"
+    ):
         diagnosis = release_data.get("diagnosis")
         if not isinstance(diagnosis, dict):
             continue
+        prev_version = None
         for key in list(diagnosis.keys()):
             if key.endswith(":free"):
                 new_key = normalize_model_name(key)
                 if new_key and new_key != key:
                     diagnosis[new_key] = diagnosis.pop(key)
                     fixed_count += 1
+        for analyzer_key, analyzer_data in list(diagnosis.items()):
+            if analyzer_key == "from_version":
+                continue
+            if not isinstance(analyzer_data, dict):
+                continue
+            if "compliant" not in analyzer_data:
+                del diagnosis[analyzer_key]
+                fixed_count += 1
+                continue
+            if "from_version" in analyzer_data:
+                del analyzer_data["from_version"]
+                fixed_count += 1
+        if "from_version" not in diagnosis:
+            if prev_version is None:
+                prev_version = releases.find_previous_version(
+                    crate_name, release_version
+                )
+            if prev_version:
+                diagnosis["from_version"] = prev_version
+                fixed_count += 1
     return fixed_count
 
 
@@ -132,7 +158,9 @@ class LasvContext:
                         del release['diagnosis']
                 self.save()
 
-    def start_diagnosis(self, crate: str, version: str, analyzer: str) -> None:
+    def start_diagnosis(
+        self, crate: str, version: str, analyzer: str, from_version: str | None = None
+    ) -> None:
         """Initialize diagnosis structure for a specific analyzer."""
         if 'crates' not in self.data:
             self.data['crates'] = {}
@@ -147,7 +175,10 @@ class LasvContext:
         if 'diagnosis' not in rel_data:
             rel_data['diagnosis'] = {}
 
-        rel_data['diagnosis'][analyzer] = {'changes': []}
+        diag_data = {'changes': []}
+        if from_version:
+            rel_data['diagnosis'].setdefault('from_version', from_version)
+        rel_data['diagnosis'][analyzer] = diag_data
         self.save()
 
     def add_llm_usage(

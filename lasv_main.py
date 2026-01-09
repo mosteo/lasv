@@ -19,7 +19,7 @@ import sys
 import argparse
 
 from lasv import crates
-from lasv.context import LasvContext, normalize_model_name, fix_free_model_keys
+from lasv.context import LasvContext, normalize_model_name, fix_context_data
 
 
 def lasv_main():
@@ -70,7 +70,7 @@ def lasv_main():
     context.load_config()
 
     if args.fix:
-        fixed_count = fix_free_model_keys(context)
+        fixed_count = fix_context_data(context)
         if fixed_count:
             context.save()
         print(f"Fixed {fixed_count} key(s).")

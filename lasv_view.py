@@ -193,6 +193,8 @@ class LasvTreeModel(QAbstractItemModel):
 
                 crate_verdicts = []
                 crate_non_files_analyses = 0
+                crate_cost_total = 0.0
+                crate_cost_has_value = False
                 releases = crate_data.get('releases', {})
 
                 # Add crate metadata as info
@@ -222,6 +224,8 @@ class LasvTreeModel(QAbstractItemModel):
                     release_has_changes = False
 
                     # Add release-level diagnosis/summary/changes as children
+                    release_non_files_analyses = 0
+                    release_from_version = None
                     if release_data.get('diagnosis'):
                         diag_item = LasvTreeItem(release_data['diagnosis'], release_item)
                         diag_item.item_type = "diagnosis"
@@ -235,16 +239,27 @@ class LasvTreeModel(QAbstractItemModel):
                         # Add each analyzer (files, model names) under diagnosis
                         diagnosis_data = release_data['diagnosis']
                         if isinstance(diagnosis_data, dict):
+                            release_from_version = diagnosis_data.get("from_version")
+                        if isinstance(diagnosis_data, dict):
                             for analyzer_name, analyzer_data in sorted(diagnosis_data.items()):
+                                if analyzer_name == "from_version":
+                                    continue
                                 if isinstance(analyzer_data, dict):
                                     if analyzer_name == "files":
                                         continue
+                                    if release_from_version is None:
+                                        release_from_version = analyzer_data.get("from_version")
+                                    release_non_files_analyses += 1
                                     verdict = diagnosis_verdict(analyzer_data)
                                     if verdict is not None:
                                         diagnosis_count += 1
                                         diagnosis_values.append(verdict)
                                         crate_verdicts.append(verdict)
                                         crate_non_files_analyses += 1
+                                    cost_val = analyzer_data.get("llm_cost")
+                                    if isinstance(cost_val, (int, float)):
+                                        crate_cost_total += float(cost_val)
+                                        crate_cost_has_value = True
                                     # Check if filter is enabled and analyzer has no changes
                                     changes = analyzer_data.get('changes', [])
                                     has_changes = isinstance(changes, list) and len(changes) > 0
@@ -267,7 +282,11 @@ class LasvTreeModel(QAbstractItemModel):
                                     if 'compliant' in analyzer_data:
                                         comp_item = LasvTreeItem({'text': analyzer_data['compliant']}, analyzer_item)
                                         comp_item.item_type = "compliance"
-                                        comp_item.display_name = f"Compliance: {analyzer_data['compliant']}"
+                                        comp_text = analyzer_data['compliant']
+                                        display = f"Compliance: {comp_text}"
+                                        if comp_text != "strict" and 'noncompliance' in analyzer_data:
+                                            display = f"{display} - {analyzer_data['noncompliance']}"
+                                        comp_item.display_name = display
                                         analyzer_item.add_child(comp_item)
 
                                     # Add noncompliance reason if present
@@ -311,6 +330,11 @@ class LasvTreeModel(QAbstractItemModel):
                         # Only add diagnosis if it has analyzers (when filter is enabled)
                         if diag_has_analyzers or not self.filter_no_changes:
                             release_item.add_child(diag_item)
+
+                    if release_from_version:
+                        release_item.display_name += f" [from {release_from_version}]"
+                    if release_non_files_analyses:
+                        release_item.display_name += f" ({release_non_files_analyses})"
                     if release_data.get('summary'):
                         summary_item = LasvTreeItem({'text': release_data['summary']}, release_item)
                         summary_item.item_type = "summary"
@@ -385,6 +409,8 @@ class LasvTreeModel(QAbstractItemModel):
                     crate_item.display_name += f" [{verdict}]"
                     crate_item.data["diagnosis_verdict"] = verdict
                 crate_item.display_name += f" ({crate_non_files_analyses})"
+                if crate_cost_has_value and crate_cost_total > 0:
+                    crate_item.display_name += f" (${crate_cost_total:.2f})"
                 if has_content or not self.filter_empty_crates:
                     self.root_item.add_child(crate_item)
 
@@ -502,8 +528,37 @@ class LasvTreeModel(QAbstractItemModel):
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
         """Return header data."""
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
-            return "LASV Analysis Tree"
+            total_cost = self._total_llm_cost()
+            if total_cost is None:
+                return "LASV Analysis Tree"
+            return f"LASV Analysis Tree (${total_cost:.2f})"
         return None
+
+    def _total_llm_cost(self) -> float | None:
+        """Compute total LLM cost across all diagnoses."""
+        total = 0.0
+        has_value = False
+        crates = self.root_item.children
+        for crate_item in crates:
+            if not isinstance(crate_item.data, dict):
+                continue
+            releases = crate_item.data.get("releases", {})
+            if not isinstance(releases, dict):
+                continue
+            for release_data in releases.values():
+                diagnosis = release_data.get("diagnosis", {})
+                if not isinstance(diagnosis, dict):
+                    continue
+                for analyzer_name, analyzer_data in diagnosis.items():
+                    if analyzer_name == "files":
+                        continue
+                    if not isinstance(analyzer_data, dict):
+                        continue
+                    cost_val = analyzer_data.get("llm_cost")
+                    if isinstance(cost_val, (int, float)):
+                        total += float(cost_val)
+                        has_value = True
+        return total if has_value else None
 
 
 class DetailPanel(QTextEdit):

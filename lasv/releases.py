@@ -326,7 +326,7 @@ def analyze_release_with_model(
         print(f"      Removed existing '{model}' diagnosis")
 
     try:
-        context.start_diagnosis(crate, version, model_key)
+        context.start_diagnosis(crate, version, model_key, from_version=v1)
         compare_specs(context, crate, v1, version)
         context.finish_diagnosis(crate, v1, version, model_key)
         return True
@@ -446,7 +446,7 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
 
         try:
             if not files_diagnosis_exists:
-                context.start_diagnosis(crate, v2, "files")
+                context.start_diagnosis(crate, v2, "files", from_version=v1)
                 compare_specs(context, crate, v1, v2)
                 context.finish_diagnosis(crate, v1, v2, "files")
             else:
@@ -474,7 +474,7 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
 
             try:
                 if not model_diagnosis_exists:
-                    context.start_diagnosis(crate, v2, model_key)
+                    context.start_diagnosis(crate, v2, model_key, from_version=v1)
                     compare_specs(context, crate, v1, v2)
                     context.finish_diagnosis(crate, v1, v2, model_key)
                 else:
