@@ -5,6 +5,7 @@ import os
 import re
 from lasv_main import LasvContext, ChangeType, ChangeInfo
 from lasv import llm
+from lasv import colors
 
 
 def _get_public_spec(path: str) -> str:
@@ -65,7 +66,27 @@ def compare_spec_content(
         print(f"         Identical spec in {parent_folder}/{filename}")
         return
 
-    response = llm.query_model(context.model, spec1_public, spec2_public)
+    response, usage = llm.query_model(
+        context.model, spec1_public, spec2_public
+    )
+    analyzer_name = context.model_key or context.model
+    _total_spec_chars, _total_system_chars, total_cost = context.add_llm_usage(
+        crate,
+        version,
+        analyzer_name,
+        usage.spec_chars,
+        usage.system_chars,
+        usage.cost,
+    )
+    if usage.cost is None:
+        cost_text = "instant cost: N/A"
+    else:
+        cost_text = f"instant cost: ${usage.cost:.5f}"
+    if total_cost is None:
+        total_cost_text = "accumulated cost: N/A"
+    else:
+        total_cost_text = f"accumulated cost: ${total_cost:.5f}"
+    print(colors.lilac(f"         {cost_text}, {total_cost_text}"))
 
     first_change = True
     for line in response.splitlines():
@@ -89,7 +110,7 @@ def compare_spec_content(
             context.emit_change(
                 crate,
                 version,
-                context.model,
+                analyzer_name,
                 ChangeInfo(
                     severity,
                     int(line_num),

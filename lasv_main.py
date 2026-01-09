@@ -22,6 +22,7 @@ from enum import Enum
 
 import semver
 import yaml
+from tqdm import tqdm
 
 from lasv import crates
 
@@ -48,6 +49,40 @@ class BumpType(Enum):
     NONE = "none"
 
 
+def normalize_model_name(model: str | None) -> str | None:
+    """
+    Normalize model name for storage so ':free' variants map to the same key.
+    """
+    if not model:
+        return None
+    if model.endswith(":free"):
+        return model[:-5]
+    return model
+
+
+def fix_free_model_keys(context: "LasvContext") -> int:
+    """
+    Normalize stored model keys by removing ':free' suffixes.
+    Returns the number of keys updated.
+    """
+    fixed_count = 0
+    crates_data = context.data.get("crates", {})
+    releases = []
+    for crate_data in crates_data.values():
+        releases.extend(crate_data.get("releases", {}).values())
+    for release_data in tqdm(releases, desc="Normalizing model keys"):
+        diagnosis = release_data.get("diagnosis")
+        if not isinstance(diagnosis, dict):
+            continue
+        for key in list(diagnosis.keys()):
+            if key.endswith(":free"):
+                new_key = normalize_model_name(key)
+                if new_key and new_key != key:
+                    diagnosis[new_key] = diagnosis.pop(key)
+                    fixed_count += 1
+    return fixed_count
+
+
 @dataclass
 class ChangeInfo:
     """Information about a detected change."""
@@ -66,11 +101,14 @@ class LasvContext:
         self.filename = filename
         self.data = {}
         self.model = None
+        self.model_key = None
         self.full = False
+        self.blacklist = set()
 
     def load(self):
         """Load context from YAML file."""
         if os.path.exists(self.filename):
+            print(f"Loading context from {self.filename}...")
             with open(self.filename, "r", encoding="utf-8") as f:
                 loaded = yaml.safe_load(f)
                 self.data = loaded if loaded else {}
@@ -79,6 +117,26 @@ class LasvContext:
             self.data['crates'] = {}
 
         return self.data
+
+    def load_config(self, filename: str = "config.yaml") -> None:
+        """
+        Load optional configuration data.
+        Currently supports: blacklist -> list of crate names.
+        """
+        if not os.path.exists(filename):
+            return
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                config = yaml.safe_load(f) or {}
+        except (OSError, yaml.YAMLError) as e:
+            print(f"Warning: could not load {filename}: {e}")
+            return
+
+        blacklist = config.get("blacklist", [])
+        if isinstance(blacklist, list):
+            self.blacklist = {str(name) for name in blacklist}
+        else:
+            print(f"Warning: {filename} blacklist must be a list.")
 
     def clear_diagnosis(self, crate: str) -> None:
         """Remove all diagnosis data for a given crate."""
@@ -107,6 +165,43 @@ class LasvContext:
 
         rel_data['diagnosis'][analyzer] = {'changes': []}
         self.save()
+
+    def add_llm_usage(
+        self,
+        crate: str,
+        version: str,
+        analyzer: str,
+        spec_chars: int,
+        system_chars: int,
+        cost: float | None,
+    ) -> tuple[int, int, float | None]:
+        """
+        Accumulate LLM usage statistics for a diagnosis.
+        """
+        diag = (
+            self.data.get('crates', {})
+            .get(crate, {})
+            .get('releases', {})
+            .get(version, {})
+            .get('diagnosis', {})
+            .get(analyzer)
+        )
+        if not diag:
+            return 0, 0, None
+
+        diag['llm_spec_chars'] = diag.get('llm_spec_chars', 0) + spec_chars
+        diag['llm_system_chars'] = diag.get('llm_system_chars', 0) + system_chars
+        diag['llm_chars'] = (
+            diag.get('llm_spec_chars', 0) + diag.get('llm_system_chars', 0)
+        )
+        if cost is not None:
+            diag['llm_cost'] = diag.get('llm_cost', 0.0) + cost
+        self.save()
+        return (
+            diag.get('llm_spec_chars', 0),
+            diag.get('llm_system_chars', 0),
+            diag.get('llm_cost'),
+        )
 
     def emit_change(self, crate: str, version: str, analyzer: str, change: ChangeInfo):
         """
@@ -292,6 +387,11 @@ def lasv_main():
         action="store_true",
         help="Enable full analysis mode."
     )
+    parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="Normalize stored model keys (remove ':free') and exit."
+    )
     args = parser.parse_args()
 
     if args.model and not os.environ.get("OPENROUTER_API_KEY"):
@@ -300,10 +400,19 @@ def lasv_main():
 
     context = LasvContext()
     context.load()
+    context.load_config()
+
+    if args.fix:
+        fixed_count = fix_free_model_keys(context)
+        if fixed_count:
+            context.save()
+        print(f"Fixed {fixed_count} key(s).")
+        return
 
     # Set the model in context if provided
     if args.model:
         context.model = args.model
+        context.model_key = normalize_model_name(args.model)
     context.full = args.full
 
     if args.crate:

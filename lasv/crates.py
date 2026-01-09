@@ -130,6 +130,9 @@ def process(
     total_pairs = 0
 
     for crate in crates_to_process:
+        if crate in context.blacklist:
+            print(f"Skipping crate in blacklist: {crate}")
+            continue
         print(f"Processing crate: {colors.crate(crate)}")
         total_pairs += releases.find_pairs(context, crate, redo=redo)
 

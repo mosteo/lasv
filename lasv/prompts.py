@@ -50,6 +50,15 @@ Never report changes that do not affect source-level compatibility.
 Never report changes about inlining.
 Never report as minor changes that do not actually change the API contract.
 
+Assume that parameters that come from a different package now, but still have
+the same type name, are the same type and thus not a breaking change (the've
+just been moved). Example: changing from "Old_Pkg.Type_A" to "New_Pkg.Type_A"
+or from "Type_A" to "New_Pkg.Type_A" is NOT a breaking change.
+
+In Ada, adding/removing "with" packages is a transparent change, as visibility
+for clients is guaranteed not to change nor can ambiguities appear. Thus, this
+is neither patch, minor, nor major change.
+
 Changes that MUST be ignored, as they're not relevant for semantic versioning:
 - Comments (anything after ' -- ') and whitespace changes.
 - Changes in the private parts.

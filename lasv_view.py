@@ -385,6 +385,42 @@ class DetailPanel(QTextEdit):
                 return ""
             return str(val)
 
+        def _accumulate_llm_usage(val) -> tuple[int, int, float | None]:
+            """
+            Recursively sum llm spec/system chars and llm_cost in a nested structure.
+            """
+            total_spec_chars = 0
+            total_system_chars = 0
+            total_cost = 0.0
+            has_cost = False
+
+            if isinstance(val, dict):
+                if isinstance(val.get("llm_spec_chars"), int):
+                    total_spec_chars += val.get("llm_spec_chars", 0)
+                if isinstance(val.get("llm_system_chars"), int):
+                    total_system_chars += val.get("llm_system_chars", 0)
+                cost_val = val.get("llm_cost")
+                if isinstance(cost_val, (int, float)):
+                    total_cost += float(cost_val)
+                    has_cost = True
+                for child in val.values():
+                    child_spec, child_system, child_cost = _accumulate_llm_usage(child)
+                    total_spec_chars += child_spec
+                    total_system_chars += child_system
+                    if child_cost is not None:
+                        total_cost += child_cost
+                        has_cost = True
+            elif isinstance(val, list):
+                for child in val:
+                    child_spec, child_system, child_cost = _accumulate_llm_usage(child)
+                    total_spec_chars += child_spec
+                    total_system_chars += child_system
+                    if child_cost is not None:
+                        total_cost += child_cost
+                        has_cost = True
+
+            return total_spec_chars, total_system_chars, (total_cost if has_cost else None)
+
         content = []
         content.append(f"Type: {item.item_type.upper()}")
         content.append(f"Name: {item.display_name}")
@@ -479,6 +515,22 @@ class DetailPanel(QTextEdit):
                 if key != 'releases':
                     content.append(f"{key}: {_str(value)}")
             content.append(f"\nNumber of releases: {len(item.data.get('releases', {}))}")
+
+        if item.item_type in ["crate", "release", "diagnosis", "analyzer"]:
+            llm_spec_chars, llm_system_chars, llm_cost = _accumulate_llm_usage(item.data)
+            total_chars = llm_spec_chars + llm_system_chars
+            if total_chars > 0:
+                useful_pct = 100.0 * (llm_spec_chars / total_chars)
+            else:
+                useful_pct = 0.0
+            content.append("\nLLM Usage:")
+            content.append(f"Spec characters: {llm_spec_chars}")
+            content.append(f"System characters: {llm_system_chars}")
+            content.append(f"Useful ratio: {useful_pct:.1f}%")
+            if llm_cost is None:
+                content.append("Cost: N/A")
+            else:
+                content.append(f"Cost: ${llm_cost:.5f}")
 
         self.setPlainText("\n".join(content))
 

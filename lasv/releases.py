@@ -404,31 +404,32 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
 
         # If a model is provided, check if model diagnosis exists and run it if not
         if context.model:
+            model_key = context.model_key or context.model
             model_diagnosis_exists = (
                 'releases' in context.data['crates'][crate] and
                 v2 in context.data['crates'][crate]['releases'] and
                 'diagnosis' in context.data['crates'][crate]['releases'][v2] and
-                context.model in context.data['crates'][crate]['releases'][v2]['diagnosis']
+                model_key in context.data['crates'][crate]['releases'][v2]['diagnosis']
             )
 
             # If redo is True, remove existing model diagnosis
             if redo and model_diagnosis_exists:
-                del context.data['crates'][crate]['releases'][v2]['diagnosis'][context.model]
+                del context.data['crates'][crate]['releases'][v2]['diagnosis'][model_key]
                 model_diagnosis_exists = False
                 print(f"      Removed existing '{context.model}' diagnosis")
 
             try:
                 if not model_diagnosis_exists:
-                    context.start_diagnosis(crate, v2, context.model)
+                    context.start_diagnosis(crate, v2, model_key)
                     compare_specs(context, crate, v1, v2)
-                    context.finish_diagnosis(crate, v1, v2, context.model)
+                    context.finish_diagnosis(crate, v1, v2, model_key)
                 else:
                     print(f"      Skipping '{context.model}' diagnosis (already exists)")
             except Exception as e:
                 print(f"      Error during model-based diagnosis: {e}")
                 # Set diagnosis to error and store the error as the reason
                 context.finish_diagnosis_with_error(crate, v2,
-                                                    context.model, str(e))
+                                                    model_key, str(e))
 
         if not context.full and major_found and minor_found and patch_found:
             print(colors.yellow(
