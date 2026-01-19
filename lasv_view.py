@@ -289,6 +289,17 @@ class LasvTreeModel(QAbstractItemModel):
                                         comp_item.display_name = display
                                         analyzer_item.add_child(comp_item)
 
+                                    if 'all_specs' in analyzer_data:
+                                        all_specs_item = LasvTreeItem(
+                                            {'text': analyzer_data['all_specs']},
+                                            analyzer_item,
+                                        )
+                                        all_specs_item.item_type = "all_specs"
+                                        all_specs_item.display_name = (
+                                            f"All specs: {analyzer_data['all_specs']}"
+                                        )
+                                        analyzer_item.add_child(all_specs_item)
+
                                     # Add noncompliance reason if present
                                     if 'noncompliance' in analyzer_data:
                                         noncomp_item = LasvTreeItem({'text': analyzer_data['noncompliance']}, analyzer_item)

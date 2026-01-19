@@ -112,7 +112,8 @@ class LasvContext:
         self.data = {}
         self.model = None
         self.model_key = None
-        self.full = False
+        self.all_releases = False
+        self.all_specs = False
         self.blacklist = set()
 
     def load(self):

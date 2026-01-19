@@ -46,7 +46,7 @@ def _get_public_spec(path: str) -> str:
 
 def compare_spec_content(
     context: LasvContext, crate: str, version: str, path1: str, path2: str
-) -> None:
+) -> tuple[bool, bool]:
     """
     Compare the content of two existing specification files using an LLM.
 
@@ -56,24 +56,24 @@ def compare_spec_content(
     :return: None
     """
     if not context.model:
-        return
+        return False, False
 
     try:
         if os.path.getsize(path1) > MAX_SPEC_BYTES:
             print(colors.yellow(
                 f"         Skipping large spec (>64k): {os.path.basename(path1)}"
             ))
-            return
+            return False, False
         if os.path.getsize(path2) > MAX_SPEC_BYTES:
             print(colors.yellow(
                 f"         Skipping large spec (>64k): {os.path.basename(path2)}"
             ))
-            return
+            return False, False
     except OSError as e:
         print(colors.yellow(
             f"         Skipping spec due to size check error: {e}"
         ))
-        return
+        return False, False
 
     spec1_public = _get_public_spec(path1)
     spec2_public = _get_public_spec(path2)
@@ -83,7 +83,7 @@ def compare_spec_content(
         parent_folder = os.path.basename(os.path.dirname(path2))
         filename = os.path.basename(path2)
         print(f"         Identical spec in {parent_folder}/{filename}")
-        return
+        return False, False
 
     response, usage = llm.query_model(
         context.model, spec1_public, spec2_public
@@ -108,6 +108,8 @@ def compare_spec_content(
     print(colors.lilac(f"         {cost_text}, {total_cost_text}"))
 
     first_change = True
+    has_major = False
+    has_minor = False
     for line in response.splitlines():
         match = re.match(r"(MAJOR|minor) \((\d+), (\d+)\): (.*)", line)
         if match:
@@ -124,6 +126,10 @@ def compare_spec_content(
                 if severity_str == "MAJOR"
                 else ChangeType.MINOR
             )
+            if severity == ChangeType.MAJOR:
+                has_major = True
+            else:
+                has_minor = True
 
             # Store the full path for the change info (both old and new)
             context.emit_change(
@@ -146,3 +152,5 @@ def compare_spec_content(
         filename = os.path.basename(path2)
         print(f"         No semantic changes in {parent_folder}/{filename}")
         parent_folder = os.path.basename(os.path.dirname(path2))
+
+    return has_major, has_minor

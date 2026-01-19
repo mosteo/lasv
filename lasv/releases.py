@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import subprocess
+import semver
 from typing import Optional
 
 import semver
@@ -126,7 +127,7 @@ def is_private_package(spec_path: str) -> bool:
 
 
 def compare_specs(
-    context: "LasvContext", crate: str, v1: str, v2: str
+    context: "LasvContext", crate: str, v1: str, v2: str, analyzer: str
 ) -> None:
     """
     Compare public specifications (*.ads files) between two releases to identify
@@ -150,12 +151,48 @@ def compare_specs(
     specs_v1 = get_specs(path_v1)
     specs_v2 = get_specs(path_v2)
 
-    all_specs = set(specs_v1.keys()) | set(specs_v2.keys())
+    all_specs = sorted(set(specs_v1.keys()) | set(specs_v2.keys()))
+    bump_type = None
+    if context.model and not context.all_specs:
+        try:
+            bump_type = _detect_version_bump(
+                semver.Version.parse(v1),
+                semver.Version.parse(v2),
+            )
+        except ValueError:
+            bump_type = None
+    has_major = False
+    has_minor = False
 
-    for spec in all_specs:
+    all_specs_analyzed = True
+    for idx, spec in enumerate(all_specs):
         p1 = specs_v1.get(spec)
         p2 = specs_v2.get(spec)
-        compare_spec_files(context, crate, v2, p1, p2)
+        spec_major, spec_minor = compare_spec_files(context, crate, v2, p1, p2)
+        has_major = has_major or spec_major
+        has_minor = has_minor or spec_minor
+
+        if bump_type == BumpType.MINOR and has_major:
+            all_specs_analyzed = idx == len(all_specs) - 1
+            break
+        if bump_type == BumpType.PATCH and (has_major or has_minor):
+            all_specs_analyzed = idx == len(all_specs) - 1
+            break
+        if bump_type == BumpType.MAJOR and has_major:
+            all_specs_analyzed = idx == len(all_specs) - 1
+            break
+
+    diagnosis = (
+        context.data.get("crates", {})
+        .get(crate, {})
+        .get("releases", {})
+        .get(v2, {})
+        .get("diagnosis", {})
+        .get(analyzer)
+    )
+    if isinstance(diagnosis, dict):
+        diagnosis["all_specs"] = all_specs_analyzed
+        context.save()
 
 
 def compare_spec_files(
@@ -164,38 +201,42 @@ def compare_spec_files(
     version: str,
     path1: Optional[str],
     path2: Optional[str],
-) -> None:
+) -> tuple[bool, bool]:
     """
     Compare two paths to the same *.ads file.
 
     One path may be None if the file is missing in one of the releases.
     If not None, compares the content of the specs.
     """
+    has_major = False
+    has_minor = False
     if path1 is None:
         # File added in v2. Check if it's a private package first.
         if path2 and is_private_package(path2):
             # Private packages are not part of public API
-            return
+            return has_major, has_minor
         # File added in v2. Minor change (backward compatible addition).
         if context.model is None and path2:
             context.emit_change(crate, version, 'files',
                                 ChangeInfo(ChangeType.MINOR, 0, 0,
                                         f"Public spec file added: {os.path.basename(path2)}",
                                         path2, ""))
-        return
+            has_minor = True
+        return has_major, has_minor
 
     if path2 is None:
         # File removed in v2. Check if it was a private package.
         if path1 and is_private_package(path1):
             # Private packages are not part of public API
-            return
+            return has_major, has_minor
         # File removed in v2. Major change (backward incompatible removal).
         if context.model is None and path1:
             context.emit_change(crate, version, 'files',
                                 ChangeInfo(ChangeType.MAJOR, 0, 0,
                                            f"Public spec file removed: {os.path.basename(path1)}",
                                            "", path1))
-        return
+            has_major = True
+        return has_major, has_minor
 
     # Both files exist - check privacy status
     is_private_1 = is_private_package(path1)
@@ -204,7 +245,7 @@ def compare_spec_files(
     # If both exist and private, no change.
     if is_private_1 and is_private_2:
         print(f"         Skipping private spec in {os.path.basename(path2)}")
-        return
+        return has_major, has_minor
 
     # if file exists in both, but is private only in one case, this affects the public API.
     if is_private_1 != is_private_2:
@@ -214,10 +255,19 @@ def compare_spec_files(
                             ChangeInfo(change_type, 0, 0,
                                        f"Public spec file {action}: {os.path.basename(path2)}",
                                        path2, path1))
-        return
+        if change_type == ChangeType.MAJOR:
+            has_major = True
+        else:
+            has_minor = True
+        return has_major, has_minor
 
     # Both exist and are public, so we will compare their content.
-    specs_module.compare_spec_content(context, crate, version, path1, path2)
+    major_found, minor_found = specs_module.compare_spec_content(
+        context, crate, version, path1, path2
+    )
+    has_major = has_major or major_found
+    has_minor = has_minor or minor_found
+    return has_major, has_minor
 
 
 def retrieve(crate, version: str) -> None:
@@ -327,7 +377,7 @@ def analyze_release_with_model(
 
     try:
         context.start_diagnosis(crate, version, model_key, from_version=v1)
-        compare_specs(context, crate, v1, version)
+        compare_specs(context, crate, v1, version, model_key)
         context.finish_diagnosis(crate, v1, version, model_key)
         return True
     except Exception as e:
@@ -385,7 +435,7 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
             continue
 
         bump_type = None
-        if not context.full:
+        if not context.all_releases:
             try:
                 bump_type = _detect_version_bump(
                     semver.Version.parse(v1),
@@ -447,7 +497,7 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
         try:
             if not files_diagnosis_exists:
                 context.start_diagnosis(crate, v2, "files", from_version=v1)
-                compare_specs(context, crate, v1, v2)
+                compare_specs(context, crate, v1, v2, "files")
                 context.finish_diagnosis(crate, v1, v2, "files")
             else:
                 print(f"      Skipping 'files' diagnosis (already exists)")
@@ -475,7 +525,7 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
             try:
                 if not model_diagnosis_exists:
                     context.start_diagnosis(crate, v2, model_key, from_version=v1)
-                    compare_specs(context, crate, v1, v2)
+                    compare_specs(context, crate, v1, v2, model_key)
                     context.finish_diagnosis(crate, v1, v2, model_key)
                 else:
                     print(f"      Skipping '{context.model}' diagnosis (already exists)")
@@ -485,7 +535,7 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
                 context.finish_diagnosis_with_error(crate, v2,
                                                     model_key, str(e))
 
-        if not context.full and major_found and minor_found and patch_found:
+        if not context.all_releases and major_found and minor_found and patch_found:
             print(colors.yellow(
                 "   Stopping early: first major, minor, and patch bumps processed."
             ))

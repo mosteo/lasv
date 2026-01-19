@@ -50,9 +50,14 @@ def lasv_main():
         help="Remove existing diagnosis and redo it."
     )
     parser.add_argument(
-        "--full",
+        "--all-releases",
         action="store_true",
-        help="Enable full analysis mode."
+        help="Analyze all releases (do not stop early)."
+    )
+    parser.add_argument(
+        "--all-specs",
+        action="store_true",
+        help="Analyze all specs (else stop once contract confirmed/broken)."
     )
     parser.add_argument(
         "--fix",
@@ -80,7 +85,8 @@ def lasv_main():
     if args.model:
         context.model = args.model
         context.model_key = normalize_model_name(args.model)
-    context.full = args.full
+    context.all_releases = args.all_releases
+    context.all_specs = args.all_specs
 
     if args.crate:
         print(f"Processing only crate: {args.crate}")

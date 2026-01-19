@@ -1,4 +1,4 @@
-- [ ] Implement early stop within analysis when contract confirmed/broken for shure
+- [x] Implement early stop within analysis when contract confirmed/broken for sure
 
 ## Evaluation
 - [ ] Cost of full (??!?!?)
