@@ -21,7 +21,7 @@ class LlmUsage:
 
 
 def query_model(
-    model: str, spec1_content: str, spec2_content: str
+    model: str, spec1_content: str, spec2_content: str, prompt_name: str = "detailed"
 ) -> tuple[str, LlmUsage]:
     """
     Query an LLM model through the OpenRouter API to compare two specs.
@@ -30,7 +30,7 @@ def query_model(
     """
     api_key = os.environ.get("OPENROUTER_API_KEY")
 
-    prompt = prompts.INSTRUCTIONS["detailed"]
+    prompt = prompts.INSTRUCTIONS[prompt_name]
     user_content = f"OLD:\n{spec1_content}\n\nNEW:\n{spec2_content}"
     sent_system_chars = len(prompt)
     sent_spec_chars = len(spec1_content) + len(spec2_content)

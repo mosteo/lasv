@@ -127,7 +127,12 @@ def is_private_package(spec_path: str) -> bool:
 
 
 def compare_specs(
-    context: "LasvContext", crate: str, v1: str, v2: str, analyzer: str
+    context: "LasvContext",
+    crate: str,
+    v1: str,
+    v2: str,
+    analyzer: str,
+    prompt_name: str = "detailed",
 ) -> None:
     """
     Compare public specifications (*.ads files) between two releases to identify
@@ -165,12 +170,15 @@ def compare_specs(
     has_minor = False
 
     all_specs_analyzed = True
+    specs_analyzed_count = 0
+    total_specs_count = len(all_specs)
     for idx, spec in enumerate(all_specs):
         p1 = specs_v1.get(spec)
         p2 = specs_v2.get(spec)
         spec_major, spec_minor = compare_spec_files(context, crate, v2, p1, p2)
         has_major = has_major or spec_major
         has_minor = has_minor or spec_minor
+        specs_analyzed_count += 1
 
         if bump_type == BumpType.MINOR and has_major:
             all_specs_analyzed = idx == len(all_specs) - 1
@@ -192,6 +200,8 @@ def compare_specs(
     )
     if isinstance(diagnosis, dict):
         diagnosis["all_specs"] = all_specs_analyzed
+        diagnosis["specs_analyzed"] = specs_analyzed_count
+        diagnosis["specs_total"] = total_specs_count
         context.save()
 
 
@@ -201,6 +211,7 @@ def compare_spec_files(
     version: str,
     path1: Optional[str],
     path2: Optional[str],
+    prompt_name: str = "detailed",
 ) -> tuple[bool, bool]:
     """
     Compare two paths to the same *.ads file.
@@ -263,7 +274,7 @@ def compare_spec_files(
 
     # Both exist and are public, so we will compare their content.
     major_found, minor_found = specs_module.compare_spec_content(
-        context, crate, version, path1, path2
+        context, crate, version, path1, path2, prompt_name
     )
     has_major = has_major or major_found
     has_minor = has_minor or minor_found
@@ -361,7 +372,9 @@ def analyze_release_with_model(
 
     context.model = model
     context.model_key = normalize_model_name(model)
-    model_key = context.model_key or model
+    base_model_key = context.model_key or model
+    prompt_name = context.prompt_name
+    analyzer_key = f"{base_model_key}({prompt_name})"
 
     release_data = (
         context.data
@@ -371,18 +384,18 @@ def analyze_release_with_model(
         .setdefault(version, {})
     )
     diagnosis = release_data.get('diagnosis', {})
-    if redo and model_key in diagnosis:
-        del diagnosis[model_key]
+    if redo and analyzer_key in diagnosis:
+        del diagnosis[analyzer_key]
         print(f"      Removed existing '{model}' diagnosis")
 
     try:
-        context.start_diagnosis(crate, version, model_key, from_version=v1)
-        compare_specs(context, crate, v1, version, model_key)
-        context.finish_diagnosis(crate, v1, version, model_key)
+        context.start_diagnosis(crate, version, analyzer_key, from_version=v1)
+        compare_specs(context, crate, v1, version, analyzer_key, prompt_name)
+        context.finish_diagnosis(crate, v1, version, analyzer_key)
         return True
     except Exception as e:
         print(f"      Error during model-based diagnosis: {e}")
-        context.finish_diagnosis_with_error(crate, version, model_key, str(e))
+        context.finish_diagnosis_with_error(crate, version, analyzer_key, str(e))
         return False
 
 
@@ -508,32 +521,34 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
 
         # If a model is provided, check if model diagnosis exists and run it if not
         if context.model:
-            model_key = context.model_key or context.model
+            base_model_key = context.model_key or context.model
+            prompt_name = context.prompt_name
+            analyzer_key = f"{base_model_key}({prompt_name})"
             model_diagnosis_exists = (
                 'releases' in context.data['crates'][crate] and
                 v2 in context.data['crates'][crate]['releases'] and
                 'diagnosis' in context.data['crates'][crate]['releases'][v2] and
-                model_key in context.data['crates'][crate]['releases'][v2]['diagnosis']
+                analyzer_key in context.data['crates'][crate]['releases'][v2]['diagnosis']
             )
 
             # If redo is True, remove existing model diagnosis
             if redo and model_diagnosis_exists:
-                del context.data['crates'][crate]['releases'][v2]['diagnosis'][model_key]
+                del context.data['crates'][crate]['releases'][v2]['diagnosis'][analyzer_key]
                 model_diagnosis_exists = False
                 print(f"      Removed existing '{context.model}' diagnosis")
 
             try:
                 if not model_diagnosis_exists:
-                    context.start_diagnosis(crate, v2, model_key, from_version=v1)
-                    compare_specs(context, crate, v1, v2, model_key)
-                    context.finish_diagnosis(crate, v1, v2, model_key)
+                    context.start_diagnosis(crate, v2, analyzer_key, from_version=v1)
+                    compare_specs(context, crate, v1, v2, analyzer_key, prompt_name)
+                    context.finish_diagnosis(crate, v1, v2, analyzer_key)
                 else:
                     print(f"      Skipping '{context.model}' diagnosis (already exists)")
             except Exception as e:
                 print(f"      Error during model-based diagnosis: {e}")
                 # Set diagnosis to error and store the error as the reason
                 context.finish_diagnosis_with_error(crate, v2,
-                                                    model_key, str(e))
+                                                    analyzer_key, str(e))
 
         if not context.all_releases and major_found and minor_found and patch_found:
             print(colors.yellow(

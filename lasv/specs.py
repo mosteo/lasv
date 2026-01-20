@@ -45,7 +45,12 @@ def _get_public_spec(path: str) -> str:
 
 
 def compare_spec_content(
-    context: LasvContext, crate: str, version: str, path1: str, path2: str
+    context: LasvContext,
+    crate: str,
+    version: str,
+    path1: str,
+    path2: str,
+    prompt_name: str = "detailed",
 ) -> tuple[bool, bool]:
     """
     Compare the content of two existing specification files using an LLM.
@@ -53,6 +58,7 @@ def compare_spec_content(
     :param context: The application context for emitting changes.
     :param path1: Absolute path to the old specification file.
     :param path2: Absolute path to the new specification file.
+    :param prompt_name: Name of the prompt to use for LLM comparison.
     :return: None
     """
     if not context.model:
@@ -86,9 +92,10 @@ def compare_spec_content(
         return False, False
 
     response, usage = llm.query_model(
-        context.model, spec1_public, spec2_public
+        context.model, spec1_public, spec2_public, prompt_name
     )
-    analyzer_name = context.model_key or context.model
+    base_model_name = context.model_key or context.model
+    analyzer_name = f"{base_model_name}({prompt_name})"
     _total_spec_chars, _total_system_chars, total_cost = context.add_llm_usage(
         crate,
         version,

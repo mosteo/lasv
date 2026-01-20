@@ -1,4 +1,9 @@
 - [x] Implement early stop within analysis when contract confirmed/broken for sure
+- [x] Include prompt name in stored analyses
+- [x] Load prompt name from config.yaml
+- [x] Store count of specs analyzed per release
+- [x] Store count of specs total per release
+- [x] Display spec counts as (analyzed/total) in lasv_view
 
 ## Evaluation
 - [ ] Cost of full (??!?!?)

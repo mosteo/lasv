@@ -274,6 +274,11 @@ class LasvTreeModel(QAbstractItemModel):
                                         analyzer_item.display_name = (
                                             f"{analyzer_name} [{analyzer_data['compliant']}]"
                                         )
+                                    # Add spec counts if available
+                                    specs_analyzed = analyzer_data.get("specs_analyzed")
+                                    specs_total = analyzer_data.get("specs_total")
+                                    if specs_analyzed is not None and specs_total is not None:
+                                        analyzer_item.display_name += f" ({specs_analyzed}/{specs_total})"
                                     diag_item.add_child(analyzer_item)
                                     diag_has_analyzers = True
                                     release_has_changes = True

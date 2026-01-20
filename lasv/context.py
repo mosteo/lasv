@@ -110,11 +110,12 @@ class LasvContext:
     def __init__(self, filename="lasv.yaml"):
         self.filename = filename
         self.data = {}
-        self.model = None
-        self.model_key = None
+        self.model: str | None = None
+        self.model_key: str | None = None
         self.all_releases = False
         self.all_specs = False
-        self.blacklist = set()
+        self.blacklist: set = set()
+        self.prompt_name: str = "detailed"  # Default prompt name
 
     def load(self):
         """Load context from YAML file."""
@@ -132,7 +133,9 @@ class LasvContext:
     def load_config(self, filename: str = "config.yaml") -> None:
         """
         Load optional configuration data.
-        Currently supports: blacklist -> list of crate names.
+        Currently supports:
+        - blacklist: list of crate names to skip
+        - prompt: name of the prompt to use for LLM analysis
         """
         if not os.path.exists(filename):
             return
@@ -148,6 +151,13 @@ class LasvContext:
             self.blacklist = {str(name) for name in blacklist}
         else:
             print(f"Warning: {filename} blacklist must be a list.")
+
+        prompt = config.get("prompt")
+        if prompt is not None:
+            if isinstance(prompt, str):
+                self.prompt_name = prompt
+            else:
+                print(f"Warning: {filename} prompt must be a string.")
 
     def clear_diagnosis(self, crate: str) -> None:
         """Remove all diagnosis data for a given crate."""
