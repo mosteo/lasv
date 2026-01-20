@@ -3,11 +3,20 @@ This module is responsible for comparing the content of two Ada package specific
 """
 import os
 import re
+from dataclasses import dataclass
 from lasv.context import LasvContext, ChangeType, ChangeInfo
 from lasv import llm
 from lasv import colors
 
 MAX_SPEC_BYTES = 64 * 1024
+
+
+@dataclass
+class SpecComparisonResult:
+    """Result of comparing two spec files."""
+    has_major: bool
+    has_minor: bool
+    sent_to_llm: bool
 
 
 def _get_public_spec(path: str) -> str:
@@ -51,7 +60,7 @@ def compare_spec_content(
     path1: str,
     path2: str,
     prompt_name: str = "detailed",
-) -> tuple[bool, bool]:
+) -> SpecComparisonResult:
     """
     Compare the content of two existing specification files using an LLM.
 
@@ -59,27 +68,27 @@ def compare_spec_content(
     :param path1: Absolute path to the old specification file.
     :param path2: Absolute path to the new specification file.
     :param prompt_name: Name of the prompt to use for LLM comparison.
-    :return: None
+    :return: SpecComparisonResult with has_major, has_minor, sent_to_llm
     """
     if not context.model:
-        return False, False
+        return SpecComparisonResult(False, False, False)
 
     try:
         if os.path.getsize(path1) > MAX_SPEC_BYTES:
             print(colors.yellow(
                 f"         Skipping large spec (>64k): {os.path.basename(path1)}"
             ))
-            return False, False
+            return SpecComparisonResult(False, False, False)
         if os.path.getsize(path2) > MAX_SPEC_BYTES:
             print(colors.yellow(
                 f"         Skipping large spec (>64k): {os.path.basename(path2)}"
             ))
-            return False, False
+            return SpecComparisonResult(False, False, False)
     except OSError as e:
         print(colors.yellow(
             f"         Skipping spec due to size check error: {e}"
         ))
-        return False, False
+        return SpecComparisonResult(False, False, False)
 
     spec1_public = _get_public_spec(path1)
     spec2_public = _get_public_spec(path2)
@@ -89,7 +98,7 @@ def compare_spec_content(
         parent_folder = os.path.basename(os.path.dirname(path2))
         filename = os.path.basename(path2)
         print(f"         Identical spec in {parent_folder}/{filename}")
-        return False, False
+        return SpecComparisonResult(False, False, False)
 
     response, usage = llm.query_model(
         context.model, spec1_public, spec2_public, prompt_name
@@ -160,4 +169,4 @@ def compare_spec_content(
         print(f"         No semantic changes in {parent_folder}/{filename}")
         parent_folder = os.path.basename(os.path.dirname(path2))
 
-    return has_major, has_minor
+    return SpecComparisonResult(has_major, has_minor, True)

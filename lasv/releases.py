@@ -20,6 +20,7 @@ from lasv.context import (
     normalize_model_name,
 )
 from lasv import specs as specs_module
+from lasv.specs import SpecComparisonResult
 from lasv import colors
 
 
@@ -171,14 +172,18 @@ def compare_specs(
 
     all_specs_analyzed = True
     specs_analyzed_count = 0
+    specs_skipped_count = 0
     total_specs_count = len(all_specs)
     for idx, spec in enumerate(all_specs):
         p1 = specs_v1.get(spec)
         p2 = specs_v2.get(spec)
-        spec_major, spec_minor = compare_spec_files(context, crate, v2, p1, p2)
-        has_major = has_major or spec_major
-        has_minor = has_minor or spec_minor
-        specs_analyzed_count += 1
+        result = compare_spec_files(context, crate, v2, p1, p2)
+        has_major = has_major or result.has_major
+        has_minor = has_minor or result.has_minor
+        if result.sent_to_llm:
+            specs_analyzed_count += 1
+        else:
+            specs_skipped_count += 1
 
         if bump_type == BumpType.MINOR and has_major:
             all_specs_analyzed = idx == len(all_specs) - 1
@@ -201,6 +206,7 @@ def compare_specs(
     if isinstance(diagnosis, dict):
         diagnosis["all_specs"] = all_specs_analyzed
         diagnosis["specs_analyzed"] = specs_analyzed_count
+        diagnosis["specs_skipped"] = specs_skipped_count
         diagnosis["specs_total"] = total_specs_count
         context.save()
 
@@ -212,12 +218,13 @@ def compare_spec_files(
     path1: Optional[str],
     path2: Optional[str],
     prompt_name: str = "detailed",
-) -> tuple[bool, bool]:
+) -> SpecComparisonResult:
     """
     Compare two paths to the same *.ads file.
 
     One path may be None if the file is missing in one of the releases.
     If not None, compares the content of the specs.
+    Returns: SpecComparisonResult with has_major, has_minor, sent_to_llm
     """
     has_major = False
     has_minor = False
@@ -225,7 +232,7 @@ def compare_spec_files(
         # File added in v2. Check if it's a private package first.
         if path2 and is_private_package(path2):
             # Private packages are not part of public API
-            return has_major, has_minor
+            return SpecComparisonResult(has_major, has_minor, False)
         # File added in v2. Minor change (backward compatible addition).
         if context.model is None and path2:
             context.emit_change(crate, version, 'files',
@@ -233,13 +240,13 @@ def compare_spec_files(
                                         f"Public spec file added: {os.path.basename(path2)}",
                                         path2, ""))
             has_minor = True
-        return has_major, has_minor
+        return SpecComparisonResult(has_major, has_minor, False)
 
     if path2 is None:
         # File removed in v2. Check if it was a private package.
         if path1 and is_private_package(path1):
             # Private packages are not part of public API
-            return has_major, has_minor
+            return SpecComparisonResult(has_major, has_minor, False)
         # File removed in v2. Major change (backward incompatible removal).
         if context.model is None and path1:
             context.emit_change(crate, version, 'files',
@@ -247,7 +254,7 @@ def compare_spec_files(
                                            f"Public spec file removed: {os.path.basename(path1)}",
                                            "", path1))
             has_major = True
-        return has_major, has_minor
+        return SpecComparisonResult(has_major, has_minor, False)
 
     # Both files exist - check privacy status
     is_private_1 = is_private_package(path1)
@@ -256,7 +263,7 @@ def compare_spec_files(
     # If both exist and private, no change.
     if is_private_1 and is_private_2:
         print(f"         Skipping private spec in {os.path.basename(path2)}")
-        return has_major, has_minor
+        return SpecComparisonResult(has_major, has_minor, False)
 
     # if file exists in both, but is private only in one case, this affects the public API.
     if is_private_1 != is_private_2:
@@ -270,15 +277,15 @@ def compare_spec_files(
             has_major = True
         else:
             has_minor = True
-        return has_major, has_minor
+        return SpecComparisonResult(has_major, has_minor, False)
 
     # Both exist and are public, so we will compare their content.
-    major_found, minor_found = specs_module.compare_spec_content(
+    result = specs_module.compare_spec_content(
         context, crate, version, path1, path2, prompt_name
     )
-    has_major = has_major or major_found
-    has_minor = has_minor or minor_found
-    return has_major, has_minor
+    has_major = has_major or result.has_major
+    has_minor = has_minor or result.has_minor
+    return SpecComparisonResult(has_major, has_minor, result.sent_to_llm)
 
 
 def retrieve(crate, version: str) -> None:
