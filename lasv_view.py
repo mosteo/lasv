@@ -1172,6 +1172,13 @@ class MainWindow(QMainWindow):
 
             if action == show_diff_action:
                 self.show_diff_for_item(item)
+        elif item.item_type == "analyzer":
+            menu = QMenu()
+            delete_action = menu.addAction("Delete Analysis")
+            action = menu.exec(self.tree_view.viewport().mapToGlobal(position))
+
+            if action == delete_action:
+                self.delete_analyzer(item)
         elif item.item_type == "release":
             menu = QMenu()
             analyze_menu = menu.addMenu("Analyze with...")
@@ -1195,6 +1202,77 @@ class MainWindow(QMainWindow):
         # Use the DetailPanel's display_diff method
         self.detail_panel.display_diff(item)
         self.statusBar().showMessage(f"Showing diff for: {item.display_name}")
+
+    def delete_analyzer(self, item: LasvTreeItem):
+        """Delete an analyzer from a release's diagnosis."""
+        # Get the parent diagnosis item to find the release
+        diagnosis_item = item.parent
+        if not diagnosis_item or diagnosis_item.item_type != "diagnosis":
+            QMessageBox.warning(self, "Delete Analysis", "Unable to find diagnosis parent.")
+            return
+
+        release_item = diagnosis_item.parent
+        if not release_item or release_item.item_type != "release":
+            QMessageBox.warning(self, "Delete Analysis", "Unable to find release parent.")
+            return
+
+        crate = release_item.crate_name
+        version = release_item.release_version
+        analyzer_name = item.display_name.split(" [")[0]  # Remove any status suffix
+
+        if not crate or not version:
+            QMessageBox.warning(self, "Delete Analysis", "Missing crate or release information.")
+            return
+
+        # Confirm deletion
+        reply = QMessageBox.question(
+            self,
+            "Delete Analysis",
+            f"Are you sure you want to delete the analysis '{analyzer_name}' for {crate} {version}?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        try:
+            # Load the YAML file
+            with open(self.model.yaml_path, 'r') as f:
+                data = yaml.safe_load(f)
+
+            # Navigate to the analyzer entry
+            if (data and 'crates' in data and crate in data['crates'] and
+                'releases' in data['crates'][crate] and version in data['crates'][crate]['releases'] and
+                'diagnosis' in data['crates'][crate]['releases'][version] and
+                analyzer_name in data['crates'][crate]['releases'][version]['diagnosis']):
+
+                # Delete the analyzer
+                del data['crates'][crate]['releases'][version]['diagnosis'][analyzer_name]
+
+                # If diagnosis is now empty (except for from_version), remove it
+                diagnosis = data['crates'][crate]['releases'][version]['diagnosis']
+                if len(diagnosis) <= 1 and 'from_version' in diagnosis:
+                    del data['crates'][crate]['releases'][version]['diagnosis']
+
+                # Write back to YAML file
+                with open(self.model.yaml_path, 'w') as f:
+                    yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+
+                self.refresh_data()
+                self.statusBar().showMessage(f"Deleted analysis: {analyzer_name} for {crate} {version}")
+            else:
+                QMessageBox.warning(
+                    self,
+                    "Delete Analysis",
+                    f"Analysis '{analyzer_name}' not found in {crate} {version}."
+                )
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Delete Analysis",
+                f"Error deleting analysis: {str(e)}"
+            )
 
     def analyze_release_with_model(self, item: LasvTreeItem, model_name: str):
         """Run model-only analysis for a single release."""
