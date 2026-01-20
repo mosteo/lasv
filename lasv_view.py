@@ -149,6 +149,7 @@ class LasvTreeModel(QAbstractItemModel):
         self.root_item = LasvTreeItem({"name": "Root"})
         self.filter_empty_crates = True  # Filter enabled by default
         self.filter_no_changes = True  # Filter enabled by default
+        self.filter_not_analyzed = False  # Filter disabled by default
         self.load_data()
 
     def load_data(self):
@@ -214,6 +215,21 @@ class LasvTreeModel(QAbstractItemModel):
 
                 # Add releases
                 for release_version, release_data in sorted(releases.items()):
+                    # Check if release has LLM analysis (diagnosis with non-files analyzers)
+                    has_llm_analysis = False
+                    if release_data.get('diagnosis'):
+                        diagnosis_data = release_data['diagnosis']
+                        if isinstance(diagnosis_data, dict):
+                            for analyzer_name, analyzer_data in diagnosis_data.items():
+                                if analyzer_name not in ["from_version", "files"]:
+                                    if isinstance(analyzer_data, dict):
+                                        has_llm_analysis = True
+                                        break
+
+                    # Skip release if filter is enabled and no LLM analysis
+                    if self.filter_not_analyzed and not has_llm_analysis:
+                        continue
+
                     release_item = LasvTreeItem(release_data, crate_item)
                     release_item.item_type = "release"
                     release_item.display_name = f"Release {release_version}"
@@ -445,6 +461,11 @@ class LasvTreeModel(QAbstractItemModel):
     def set_filter_no_changes(self, enabled: bool):
         """Enable or disable filtering of diagnosis with no changes."""
         self.filter_no_changes = enabled
+        self.load_data()  # Reload data with new filter setting
+
+    def set_filter_not_analyzed(self, enabled: bool):
+        """Enable or disable filtering of releases without LLM analysis."""
+        self.filter_not_analyzed = enabled
         self.load_data()  # Reload data with new filter setting
 
     def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
@@ -898,6 +919,13 @@ class MainWindow(QMainWindow):
         self.filter_no_changes_checkbox.stateChanged.connect(self.toggle_no_changes_filter)
         button_layout.addWidget(self.filter_no_changes_checkbox)
 
+        # Add filter for not analyzed checkbox
+        self.filter_not_analyzed_checkbox = QCheckBox("Hide not analyzed")
+        self.filter_not_analyzed_checkbox.setChecked(False)  # Disabled by default
+        self.filter_not_analyzed_checkbox.setToolTip("Hide releases without LLM analysis")
+        self.filter_not_analyzed_checkbox.stateChanged.connect(self.toggle_not_analyzed_filter)
+        button_layout.addWidget(self.filter_not_analyzed_checkbox)
+
         # Add separator
         button_layout.addSpacing(10)
 
@@ -1249,6 +1277,17 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Hiding diagnosis with no changes")
         else:
             self.statusBar().showMessage("Showing all diagnosis")
+
+    def toggle_not_analyzed_filter(self, state: int):
+        """Toggle the filter for releases without LLM analysis."""
+        enabled = state == Qt.CheckState.Checked.value
+        state_snapshot = self.capture_tree_state()
+        self.model.set_filter_not_analyzed(enabled)
+        self.restore_tree_state(state_snapshot)
+        if enabled:
+            self.statusBar().showMessage("Hiding releases without LLM analysis")
+        else:
+            self.statusBar().showMessage("Showing all releases")
 
     def filter_tree(self, text: str):
         """Filter tree based on search text."""

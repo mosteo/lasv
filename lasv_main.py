@@ -45,6 +45,11 @@ def lasv_main():
         help="Only list crates without performing pair detection and analysis."
     )
     parser.add_argument(
+        "--find-pairs",
+        action="store_true",
+        help="Find release pairs to analyze without performing actual analysis."
+    )
+    parser.add_argument(
         "--redo",
         action="store_true",
         help="Remove existing diagnosis and redo it."
@@ -94,7 +99,10 @@ def lasv_main():
         print("Processing all crates.")
         crates.list_crates(context)
 
-    crates.process(context, args.crate, list_only=args.list_only, redo=args.redo)
+    crates.process(context, args.crate,
+                   list_only=args.list_only,
+                   find_pairs=args.find_pairs,
+                   redo=args.redo)
     context.save()
 
 # Program entry point

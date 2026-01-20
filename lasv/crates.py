@@ -106,13 +106,14 @@ def list_crates(context : 'LasvContext'):
 
 def process(
     context: "LasvContext", target_crate: str | None = None,
-    list_only: bool = False, redo: bool = False
+    list_only: bool = False, find_pairs: bool = False, redo: bool = False
 ) -> None:
     """
     For each crate in context's 'crates' list (or only target_crate if given),
     find all pairs of consecutive releases and retrieve their sources.
 
     If list_only is True, skip pair detection and analysis.
+    If find_pairs is True, find pairs but skip analysis.
     If redo is True, remove existing diagnosis and redo it.
     """
 
@@ -134,6 +135,6 @@ def process(
             print(f"Skipping crate in blacklist: {crate}")
             continue
         print(f"Processing crate: {colors.crate(crate)}")
-        total_pairs += releases.find_pairs(context, crate, redo=redo)
+        total_pairs += releases.find_pairs(context, crate, find_pairs_only=find_pairs, redo=redo)
 
     print(f"Total release pairs: {total_pairs}")

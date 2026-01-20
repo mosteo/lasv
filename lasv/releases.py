@@ -399,10 +399,11 @@ def analyze_release_with_model(
         return False
 
 
-def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
+def find_pairs(context: "LasvContext", crate: str, find_pairs_only: bool = False, redo: bool = False) -> int:
     """
     Find all pairs of consecutive releases for a given crate.
     For each pair, retrieve its sources using retrieve().
+    If find_pairs_only is True, find pairs and retrieve sources but skip analysis.
     If redo is True, remove existing diagnosis and redo it.
     Returns the count of pairs found.
     """
@@ -491,6 +492,13 @@ def find_pairs(context: "LasvContext", crate: str, redo: bool = False) -> int:
             retrieve(crate, v2)
             first_retrieved = True
         retrieve(crate, v1)
+
+        # If find_pairs_only is True, skip analysis but store releases
+        if find_pairs_only:
+            context.ensure_release(crate, v2)
+            context.ensure_release(crate, v1)
+            v2 = v1
+            continue
 
         # Perform the actual comparison of specs
         # Check if 'files' diagnosis already exists for this version

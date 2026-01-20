@@ -169,6 +169,18 @@ class LasvContext:
                         del release['diagnosis']
                 self.save()
 
+    def ensure_release(self, crate: str, version: str) -> None:
+        """Ensure that a release entry exists in the context without diagnosis."""
+        if 'crates' not in self.data:
+            self.data['crates'] = {}
+        if crate not in self.data['crates']:
+            self.data['crates'][crate] = {}
+        if 'releases' not in self.data['crates'][crate]:
+            self.data['crates'][crate]['releases'] = {}
+        if version not in self.data['crates'][crate]['releases']:
+            self.data['crates'][crate]['releases'][version] = {}
+            self.save()
+
     def start_diagnosis(
         self, crate: str, version: str, analyzer: str, from_version: str | None = None
     ) -> None:
