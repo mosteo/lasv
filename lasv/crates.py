@@ -129,12 +129,19 @@ def process(
         return
 
     total_pairs = 0
+    total_major = 0
+    total_minor = 0
+    total_patch = 0
 
     for crate in crates_to_process:
         if crate in context.blacklist:
             print(f"Skipping crate in blacklist: {crate}")
             continue
         print(f"Processing crate: {colors.crate(crate)}")
-        total_pairs += releases.find_pairs(context, crate, find_pairs_only=find_pairs, redo=redo)
+        pairs, major, minor, patch = releases.find_pairs(context, crate, find_pairs_only=find_pairs, redo=redo)
+        total_pairs += pairs
+        total_major += major
+        total_minor += minor
+        total_patch += patch
 
-    print(f"Total release pairs: {total_pairs}")
+    print(f"Total release pairs: {total_pairs} ({total_major} major, {total_minor} minor, {total_patch} patch)")

@@ -406,13 +406,13 @@ def analyze_release_with_model(
         return False
 
 
-def find_pairs(context: "LasvContext", crate: str, find_pairs_only: bool = False, redo: bool = False) -> int:
+def find_pairs(context: "LasvContext", crate: str, find_pairs_only: bool = False, redo: bool = False) -> tuple[int, int, int, int]:
     """
     Find all pairs of consecutive releases for a given crate.
     For each pair, retrieve its sources using retrieve().
     If find_pairs_only is True, find pairs and retrieve sources but skip analysis.
     If redo is True, remove existing diagnosis and redo it.
-    Returns the count of pairs found.
+    Returns a tuple of (total_pairs, major_count, minor_count, patch_count).
     """
 
 
@@ -420,6 +420,9 @@ def find_pairs(context: "LasvContext", crate: str, find_pairs_only: bool = False
     major_found = False
     minor_found = False
     patch_found = False
+    major_count = 0
+    minor_count = 0
+    patch_count = 0
 
     # First, retrieve last version from context
     crate_info = context.data["crates"].get(crate, {})
@@ -427,12 +430,12 @@ def find_pairs(context: "LasvContext", crate: str, find_pairs_only: bool = False
     is_binary = crate_info.get("binary", False)
     if is_external or is_binary:
         print("   Skipping: non-source crate.")
-        return found_count
+        return (found_count, major_count, minor_count, patch_count)
 
     last_version = fix_version(crate_info.get("last_version"))
     if last_version == "0.1.0":
         print("   Skipping: only 0.1.0 release exists.")
-        return found_count
+        return (found_count, major_count, minor_count, patch_count)
 
     v2 = last_version
 
@@ -446,7 +449,7 @@ def find_pairs(context: "LasvContext", crate: str, find_pairs_only: bool = False
         if v1 is None:
             if found_count == 0:
                 print(f"   No release <{v2} found.")
-            return found_count
+            return (found_count, major_count, minor_count, patch_count)
 
         # Skip pairs where v1 is pre-1.0.0 (those don't have to respect semver)
         v1_parts = v1.split('.')
@@ -473,6 +476,7 @@ def find_pairs(context: "LasvContext", crate: str, find_pairs_only: bool = False
                     v2 = v1
                     continue
                 major_found = True
+                major_count += 1
             elif bump_type == BumpType.MINOR:
                 if minor_found:
                     print(colors.lilac(
@@ -481,6 +485,7 @@ def find_pairs(context: "LasvContext", crate: str, find_pairs_only: bool = False
                     v2 = v1
                     continue
                 minor_found = True
+                minor_count += 1
             elif bump_type == BumpType.PATCH:
                 if patch_found:
                     print(colors.lilac(
@@ -489,6 +494,7 @@ def find_pairs(context: "LasvContext", crate: str, find_pairs_only: bool = False
                     v2 = v1
                     continue
                 patch_found = True
+                patch_count += 1
             else:
                 v2 = v1
                 continue
@@ -573,4 +579,4 @@ def find_pairs(context: "LasvContext", crate: str, find_pairs_only: bool = False
 
         v2 = v1
 
-    return found_count
+    return (found_count, major_count, minor_count, patch_count)
